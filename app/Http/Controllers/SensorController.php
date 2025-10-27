@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class SensorController extends Controller
 {
@@ -13,10 +14,18 @@ class SensorController extends Controller
     {
         $query = Sensor::query();
 
-        // 検索
-        if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+        // 個別検索
+        if ($code = $request->input('code')) {
+            $query->where('code', 'like', "%{$code}%");
+        }
+        if ($name = $request->input('name')) {
+            $query->where('name', 'like', "%{$name}%");
+        }
+        if ($model = $request->input('model')) {
+            $query->where('model', 'like', "%{$model}%");
+        }
+        if ($serialNumber = $request->input('serial_number')) {
+            $query->where('serial_number', 'like', "%{$serialNumber}%");
         }
 
         // ソート
@@ -25,94 +34,118 @@ class SensorController extends Controller
         $query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
-        $perPage = $request->input('per_page', 10);
-        $sensors = $query->paginate($perPage)->withQueryString();
+        $perPage = intval($request->input('per_page', 10));
+
+        $sensors = Sensor::query()
+            ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
+            ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
+            ->when($request->model, fn($q,$v)=>$q->where('model','like',"%$v%"))
+            ->when($request->serial_number, fn($q,$v)=>$q->where('serial_number','like',"%$v%"))
+            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
+            ->paginate($perPage)
+            ->withQueryString(); // 検索条件をページリンクに保持
+
 
         return Inertia::render('Sensors/Index', [
             'sensors' => $sensors,
-            'filters' => $request->only(['search','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir']),
         ]);
     }
 
-    // 作成フォーム
-    public function create(Request $request)
+    // Create 画面
+        public function create(Request $request)
     {
         return Inertia::render('Sensors/Create', [
-            'filters' => $request->only(['search','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir','page'])
         ]);
     }
 
-    // 保存
     public function store(Request $request)
     {
-        $request->validate([
-            'code' => 'required|string|max:10',
-            'name' => 'required|string|max:255',
-            'model' => 'required|string|max:10',
-            'serial_number' => 'required|string|max:7',
-            'disabled' => 'boolean',
-            'display_order' => 'integer',
+        $validated = $request->validate([
+            'code' => ['required', 'string', Rule::unique('sensors')],
+            'serial_number' => ['required', 'string', Rule::unique('sensors')],
+            'name' => ['required', 'string'],
+            'model' => ['nullable', 'string'],
+            'disabled' => ['required', 'boolean'],
+            'display_order' => ['required', 'integer'],
+        ], [
+            'code.required' => __('validation.required', ['attribute' => __('Code')]),
+            'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
+            'serial_number.required' => __('validation.required', ['attribute' => __('Serial Number')]),
+            'serial_number.unique' => __('validation.unique', ['attribute' => __('Serial Number')]),
+            'name.required' => __('validation.required', ['attribute' => __('Name')]),
+            'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
 
-        Sensor::create([
-            'code' => $request->code,
-            'name' => $request->name,
-            'model' => $request->model,
-            'serial_number' => $request->serial_number,
-            'disabled' => $request->disabled ?? 0,
-            'display_order' => $request->display_order ?? 1,
-        ]);
+        Sensor::create($validated);
 
-        return redirect()->route('sensors.index', $request->only(['search','per_page','sort_by','sort_dir']));
+        return redirect()->route('sensors.index', $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir','page']))
+            ->with('success', __('Sensor has been created.'));
     }
 
-    // 編集フォーム
-    public function edit(Sensor $sensor, Request $request)
+    public function edit(Request $request, Sensor $sensor)
     {
         return Inertia::render('Sensors/Edit', [
             'sensor' => $sensor,
-            'filters' => $request->only(['search','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir','page'])
         ]);
     }
 
-    // 更新
     public function update(Request $request, Sensor $sensor)
     {
-        $request->validate([
-            'code' => 'required|string|max:10',
-            'name' => 'required|string|max:255',
-            'model' => 'required|string|max:10',
-            'serial_number' => 'required|string|max:7',
-            'disabled' => 'boolean',
-            'display_order' => 'integer',
+        $validated = $request->validate([
+            'code' => ['required', 'string', Rule::unique('sensors')->ignore($sensor->id)],
+            'serial_number' => ['required', 'string', Rule::unique('sensors')->ignore($sensor->id)],
+            'name' => ['required', 'string'],
+            'model' => ['nullable', 'string'],
+            'disabled' => ['required', 'boolean'],
+            'display_order' => ['required', 'integer'],
+        ], [
+            'code.required' => __('validation.required', ['attribute' => __('Code')]),
+            'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
+            'serial_number.required' => __('validation.required', ['attribute' => __('Serial Number')]),
+            'serial_number.unique' => __('validation.unique', ['attribute' => __('Serial Number')]),
+            'name.required' => __('validation.required', ['attribute' => __('Name')]),
+            'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
 
-        $sensor->update([
-            'code' => $request->code,
-            'name' => $request->name,
-            'model' => $request->model,
-            'serial_number' => $request->serial_number,
-            'disabled' => $request->disabled ?? 0,
-            'display_order' => $request->display_order ?? 1,
-        ]);
+        $sensor->update($validated);
 
-        return redirect()->route('sensors.index', $request->only(['search','per_page','sort_by','sort_dir']));
+        return redirect()->route('sensors.index', $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir','page']))
+            ->with('success', __('Sensor has been updated.'));
     }
 
-    // 複数削除
-    public function destroy(Request $request)
-    {
-        $ids = $request->input('ids', []);
-        Sensor::whereIn('id', $ids)->delete();
-        return redirect()->route('sensors.index', $request->only(['search','per_page','sort_by','sort_dir']));
-    }
-
-    // 単一削除（必要なら）
-    public function destroySingle(Sensor $sensor, Request $request)
+    public function destroy(Sensor $sensor)
     {
         $sensor->delete();
-        return redirect()->route('sensors.index', $request->only(['search','per_page','sort_by','sort_dir']));
+        return redirect()->route('sensors.index')->with('success', __('Sensor has been deleted.'));
     }
+
+    public function bulkDelete(Request $request)
+    {
+        Sensor::whereIn('id', $request->ids)->delete();
+        return redirect()->route('sensors.index')->with('success', __('Selected sensors have been deleted.'));
+    }
+    // API Real Check
+    public function checkCode(Request $request)
+    {
+        $exists = Sensor::where('code', $request->code)
+            ->when($request->id, fn($q) => $q->where('id','!=',$request->id))
+            ->exists();
+
+        return response()->json(['exists' => $exists]);
+    }
+    public function checkSerialNumber(Request $request)
+    {
+        $exists = Sensor::where('serial_number', $request->serial_number)
+            ->when($request->id, fn($q) => $q->where('id', '!=',$request->id))
+            ->exists();
+
+        return response()->json(['exists' => $exists]);
+    }
+
+
 }
 
 

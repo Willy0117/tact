@@ -13,6 +13,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('operators', \App\Http\Controllers\OperatorController::class);
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');
+
+    // コード重複チェック用（Ajax）
+    Route::post('sensors/checkCode', [\App\Http\Controllers\SensorController::class, 'checkCode'])
+        ->name('sensors.checkCode');    
+        // 他の認証が必要なルートもここに追加
+    // コード重複チェック用（Ajax）
+    Route::post('sensors/checkSerialNumber', [\App\Http\Controllers\SensorController::class, 'checkSerialNumber'])
+        ->name('sensors.checkSerialNumber');    
         // 他の認証が必要なルートもここに追加
 });
 

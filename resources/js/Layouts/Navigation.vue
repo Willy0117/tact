@@ -49,7 +49,7 @@ const isActive = (name) => route().current(name)
 </script>
 
 <template>
-  <div class="flex h-screen bg-gray-100">
+  <div class="flex min-h-screen bg-gray-100">
 
     <!-- サイドバー -->
     <aside v-if="!isMobile" :class="['bg-gray-50 text-gray-800 shadow-lg h-full flex flex-col transition-all duration-300 z-50 overflow-hidden', collapsed ? 'w-16' : 'w-64']">
