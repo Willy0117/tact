@@ -53,10 +53,18 @@ class SensorController extends Controller
     }
 
     // Create 画面
-        public function create(Request $request)
+    public function create(Request $request)
     {
+        $sensor = null;
+
+        // コピー用モードの場合
+        if ($request->input('mode') === 'copy' && $sensor_id = $request->input('sensor_id')) {
+            $sensor = Sensor::find($sensor_id);
+        }
+
         return Inertia::render('Sensors/Create', [
-            'filters' => $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir','page'])
+            'filters' => $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir','page']),
+            'sensor' => $sensor, // コピー元のデータを渡す
         ]);
     }
 

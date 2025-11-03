@@ -9,18 +9,30 @@ use Illuminate\Http\Request;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('devices', \App\Http\Controllers\DeviceController::class);
-    Route::resource('operators', \App\Http\Controllers\OperatorController::class);
+    // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');
+    // Device 
+    Route::resource('devices', \App\Http\Controllers\DeviceController::class);
+    Route::post('devices/bulk-delete', [\App\Http\Controllers\DeviceController::class, 'bulkDelete'])->name('devices.bulkDelete');
+    // Operators 
+    Route::resource('operators', \App\Http\Controllers\OperatorController::class);
+    Route::post('operator/bulk-delete', [\App\Http\Controllers\OperatorController::class, 'bulkDelete'])->name('operators.bulkDelete');
+    // Menus
+    Route::resource('menus', \App\Http\Controllers\MenuController::class);
+    Route::post('menus/bulk-delete', [\App\Http\Controllers\MenuController::class, 'bulkDelete'])->name('menus.bulkDelete');
 
-    // コード重複チェック用（Ajax）
+    // Sensor コード重複チェック用（Ajax）
     Route::post('sensors/checkCode', [\App\Http\Controllers\SensorController::class, 'checkCode'])
         ->name('sensors.checkCode');    
-        // 他の認証が必要なルートもここに追加
-    // コード重複チェック用（Ajax）
+    // Device コード重複チェック用（Ajax）
+    Route::post('devices/checkCode', [\App\Http\Controllers\DeviceController::class, 'checkCode'])
+        ->name('devices.checkCode');
+
+    // Sensor SerialNumber コード重複チェック用（Ajax）
     Route::post('sensors/checkSerialNumber', [\App\Http\Controllers\SensorController::class, 'checkSerialNumber'])
-        ->name('sensors.checkSerialNumber');    
+        ->name('sensors.checkSerialNumber'); 
+
         // 他の認証が必要なルートもここに追加
 });
 

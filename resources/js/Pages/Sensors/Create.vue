@@ -62,7 +62,12 @@
 
         <div class="flex space-x-2">
           <button @click="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">{{ t('save') }}</button>
-          <Link :href="route('sensors.index', props.filters)" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">{{ t('cancel') }}</Link>
+          <button
+            @click="router.get(route('sensors.index'), props.filters, { preserveState: true })"
+            class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+          >
+          {{ t('cancel') }}
+        </button>
         </div>
       </div>
     </div>
@@ -71,49 +76,72 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, router } from '@inertiajs/vue3'
-import { reactive, ref, watch } from 'vue'
+import { Link, router} from '@inertiajs/vue3'
+import { reactive, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
-const props = defineProps({
-  filters: Object
-})
-
 const { t } = useI18n()
+// Props に mode と sensor_id を追加
+const props = defineProps({
+  filters: Object,
+  sensor: Object, // 追加
+  mode: { type: String, default: '' }
+})
 
 const form = reactive({
-  code: '',
-  name: '',
-  model: '',
-  serial_number: '',
-  disabled: 1,
-  display_order: 1
+  code: props.sensor?.code ?? '',
+  name: props.sensor?.name ?? '',
+  model: props.sensor?.model ?? '',
+  serial_number: props.sensor?.serial_number ?? '',
+  disabled: props.sensor?.disabled ?? 1,
+  display_order: props.sensor?.display_order ?? 1
 })
 
+// リアルタイム重複チェック
 const errors = reactive({ code: '', name: '', model: '', serial_number: '', disabled: '', display_order: '' })
 
-// リアルタイム重複チェック
-watch(() => form.code, async (newCode) => {
-  if (!newCode) { errors.code = ''; return }
+const checkCode = async (code) => {
+  if (!code) { errors.code = ''; return }
   try {
-    const response = await axios.post(route('sensors.checkCode'), { code: newCode })
+    const response = await axios.post(route('sensors.checkCode'), { code })
     errors.code = response.data.exists ? t('code_already_exists') : ''
   } catch (e) {
     console.error(e)
   }
-})
+}
 
-// serial_numberのリアルタイムチェック
-watch(() => form.serial_number, async (newSerial) => {
-  if (!newSerial) { errors.serial_number = ''; return }
+const checkSerialNumber = async (serial_number) => {
+  if (!serial_number) { errors.serial_number = ''; return }
   try {
-    const response = await axios.post(route('sensors.checkSerialNumber'), { serial_number: newSerial })
+    const response = await axios.post(route('sensors.checkSerialNumber'), { serial_number })
     errors.serial_number = response.data.exists ? t('serial_number_already_exists') : ''
   } catch (e) {
     console.error(e)
   }
+}
+
+// コピー処理
+onMounted(() => {
+  if (props.mode === 'copy' && props.sensor_id) {
+    const sensor = props.sensors.find(s => s.id === props.sensor_id)
+    if (sensor) {
+      form.code = sensor.code
+      form.name = sensor.name
+      form.model = sensor.model
+      form.serial_number = sensor.serial_number
+      form.disabled = sensor.disabled
+      form.display_order = sensor.display_order
+
+      checkCode(sensor.code)
+      checkSerialNumber(sensor.serial_number)
+    }
+  }
 })
+
+// watch で入力中にもチェック
+watch(() => form.code, (newCode) => checkCode(newCode))
+watch(() => form.serial_number, (newSerial) => checkSerialNumber(newSerial))
 
 // 全角→半角変換
 const toHalfWidth = (str) => {

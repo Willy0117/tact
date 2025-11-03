@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <template #header>{{ t('edit_sensor') }}</template>
+    <template #header>{{ t('edit_operator') }}</template>
 
     <div class="p-6">
       <div class="space-y-4">
@@ -23,32 +23,6 @@
           <label class="block mb-1">{{ t('name') }}</label>
           <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
           <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
-        </div>
-
-        <!-- Model -->
-        <div>
-          <label class="block mb-1">{{ t('model') }}</label>
-          <input
-            v-model="form.model"
-            @input="form.model = toHalfWidth(form.model)"
-            type="text"
-            placeholder="Model"
-            class="border rounded px-3 py-2 w-full"
-          />
-          <p v-if="errors.model" class="text-red-500 text-sm mt-1">{{ errors.model }}</p>
-        </div>
-
-        <!-- Serial Number -->
-        <div>
-          <label class="block mb-1">{{ t('serial_number') }}</label>
-          <input
-            v-model="form.serial_number"
-            @input="form.serial_number = toHalfWidth(form.serial_number)"
-            type="text"
-            placeholder="Serial Number"
-            class="border rounded px-3 py-2 w-full"
-          />
-          <p v-if="errors.serial_number" class="text-red-500 text-sm mt-1">{{ errors.serial_number }}</p>
         </div>
 
         <!-- Disabled -->
@@ -76,7 +50,7 @@
             {{ t('update') }}
           </button>
           <button
-            @click="router.get(route('sensors.index'), props.filters, { preserveState: true })"
+            @click="router.get(route('operators.index'), props.filters, { preserveState: true })"
             class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
             >
             {{ t('cancel') }}
@@ -96,45 +70,30 @@ import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const props = defineProps({
-  sensor: Object,
+  operator: Object,
   filters: Object
 })
 
 const { t } = useI18n()
 
 const form = reactive({
-  code: props.sensor.code,
-  name: props.sensor.name,
-  model: props.sensor.model,
-  serial_number: props.sensor.serial_number,
-  disabled: props.sensor.disabled,
-  display_order: props.sensor.display_order
+  code: props.operator.code,
+  name: props.operator.name,
+  disabled: props.operator.disabled,
+  display_order: props.operator.display_order
 })
 
 const errors = reactive({
   code: '',
   name: '',
-  model: '',
-  serial_number: '',
 })
 
 // リアルタイム重複チェック: code
 watch(() => form.code, async (newCode) => {
   if (!newCode) { errors.code = ''; return }
   try {
-    const response = await axios.post(route('sensors.checkCode'), { code: newCode, id: props.sensor.id })
+    const response = await axios.post(route('operators.checkCode'), { code: newCode, id: props.operator.id })
     errors.code = response.data.exists ? t('code_already_exists') : ''
-  } catch (e) {
-    console.error(e)
-  }
-})
-
-// リアルタイム重複チェック: serial_number
-watch(() => form.serial_number, async (newSerial) => {
-  if (!newSerial) { errors.serial_number = ''; return }
-  try {
-    const response = await axios.post(route('sensors.checkSerialNumber'), { serial_number: newSerial, id: props.sensor.id })
-    errors.serial_number = response.data.exists ? t('serial_number_already_exists') : ''
   } catch (e) {
     console.error(e)
   }
@@ -148,15 +107,14 @@ const toHalfWidth = (str) => {
 
 const submitForm = () => {
   router.put(
-    route('sensors.update', props.sensor.id), // filters は付けない
+    route('operators.update', props.operator.id), // filters は付けない
     form,
     {
       preserveState: true,
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('sensors.index', props.filters)), // index の検索条件を保持して戻る
+      onSuccess: () => router.get(route('operators.index', props.filters)), // index の検索条件を保持して戻る
     }
   )
 }
 
 </script>
-

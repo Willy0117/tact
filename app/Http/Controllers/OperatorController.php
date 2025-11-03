@@ -2,39 +2,131 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
+use App\Models\Operator;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class OperatorController extends Controller
 {
-    public function index()
+    // 一覧ページ
+    public function index(Request $request)
     {
-        return Inertia::render('Operators/Index');
+        $query = Operator::query();
+
+        // 個別検索
+        if ($code = $request->input('code')) {
+            $query->where('code', 'like', "%{$code}%");
+        }
+        if ($name = $request->input('name')) {
+            $query->where('name', 'like', "%{$name}%");
+        }
+
+        // ソート
+        $sortBy = $request->input('sort_by', 'id');
+        $sortDir = $request->input('sort_dir', 'asc');
+        $query->orderBy($sortBy, $sortDir);
+
+        // ページあたり件数
+        $perPage = intval($request->input('per_page', 10));
+
+        $operators = Operator::query()
+            ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
+            ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
+            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
+            ->paginate($perPage)
+            ->withQueryString(); // 検索条件をページリンクに保持
+
+
+        return Inertia::render('Operators/Index', [
+            'operators' => $operators,
+            'filters' => $request->only(['code','name','per_page','sort_by','sort_dir']),
+        ]);
     }
 
-    public function create()
+    // Create 画面
+    public function create(Request $request)
     {
-        return Inertia::render('Operators/Create');
+        $operator = null;
+
+        // コピー用モードの場合
+        if ($request->input('mode') === 'copy' && $operator_id = $request->input('operator_id')) {
+            $operator = Operator::find($operator_id);
+        }
+
+        return Inertia::render('Operators/Create', [
+            'filters' => $request->only(['code','name','per_page','sort_by','sort_dir','page']),
+            'operator' => $operator, // コピー元のデータを渡す
+        ]);
     }
 
     public function store(Request $request)
     {
-        // 仮保存（後で DB 実装）
-        return redirect()->route('Operators.index');
+        $validated = $request->validate([
+            'code' => ['required', 'string', Rule::unique('operators')],
+            'name' => ['required', 'string'],
+            'disabled' => ['required', 'boolean'],
+            'display_order' => ['required', 'integer'],
+        ], [
+            'code.required' => __('validation.required', ['attribute' => __('Code')]),
+            'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
+            'name.required' => __('validation.required', ['attribute' => __('Name')]),
+            'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
+        ]);
+
+        Operator::create($validated);
+
+        return redirect()->route('operators.index', $request->only(['code','name','per_page','sort_by','sort_dir','page']))
+            ->with('success', __('operator has been created.'));
     }
 
-    public function edit($id)
+    public function edit(Request $request, Operator $operator)
     {
-        return Inertia::render('Operators/Edit', ['id' => $id]);
+        return Inertia::render('Operators/Edit', [
+            'operator' => $operator,
+            'filters' => $request->only(['code','name','per_page','sort_by','sort_dir','page'])
+        ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Operator $operator)
     {
-        return redirect()->route('Operators.index');
+        $validated = $request->validate([
+            'code' => ['required', 'string', Rule::unique('operators')->ignore($operator->id)],
+            'name' => ['required', 'string'],
+            'disabled' => ['required', 'boolean'],
+            'display_order' => ['required', 'integer'],
+        ], [
+            'code.required' => __('validation.required', ['attribute' => __('Code')]),
+            'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
+            'name.required' => __('validation.required', ['attribute' => __('Name')]),
+            'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
+        ]);
+
+        $operator->update($validated);
+
+        return redirect()->route('operators.index', $request->only(['code','name','per_page','sort_by','sort_dir','page']))
+            ->with('success', __('operator has been updated.'));
     }
 
-    public function destroy($id)
+    public function destroy(Operator $operator)
     {
-        return redirect()->route('Operators.index');
+        $operator->delete();
+        return redirect()->route('operators.index')->with('success', __('operator has been deleted.'));
     }
+
+    public function bulkDelete(Request $request)
+    {
+        Operator::whereIn('id', $request->ids)->delete();
+        return redirect()->route('operators.index')->with('success', __('Selected operators have been deleted.'));
+    }
+    // API Real Check
+    public function checkCode(Request $request)
+    {
+        $exists = Operator::where('code', $request->code)
+            ->when($request->id, fn($q) => $q->where('id','!=',$request->id))
+            ->exists();
+
+        return response()->json(['exists' => $exists]);
+    }
+
 }

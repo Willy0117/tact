@@ -104,9 +104,9 @@
               <span v-if="form.sort==='serial_number'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
-            <th class="px-3 py-2">{{ t('disabled') }}</th>
-            <th class="px-3 py-2">{{ t('display_order') }}</th>
-            <th class="px-3 py-2">{{ t('actions') }}</th>
+            <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
+            <th class="px-3 py-2 text-center">{{ t('display_order') }}</th>
+            <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -119,10 +119,13 @@
             <td class="px-3 py-2">{{ sensor.name }}</td>
             <td class="px-3 py-2">{{ sensor.model }}</td>
             <td class="px-3 py-2">{{ sensor.serial_number }}</td>
-            <td class="px-3 py-2">{{ sensor.updated_at ? dayjs(sensor.updated_at).format('YYYY/MM/DD') : '' }}</td>
-            <td class="px-3 py-2">{{ sensor.disabled ? 'Yes' : 'No' }}</td>
-            <td class="px-3 py-2">{{ sensor.display_order }}</td>
-            <td class="px-3 py-2 flex space-x-1">
+            <td class="px-3 py-2">{{ sensor.updated_at ? dayjs(sensor.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
+            <td class="px-3 py-2 text-center">{{ sensor.disabled ? 'Yes' : 'No' }}</td>
+            <td class="px-3 py-2 text-center">{{ sensor.display_order }}</td>
+            <td class="px-3 py-2 text-center flex justify-center space-x-1">
+              <button @click="copySensor(sensor.id)" class="text-green-500 hover:text-green-700">
+                <DocumentDuplicateIcon class="w-4 h-4" />
+              </button>
               <Link :href="route('sensors.edit', { sensor: sensor.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
                 <PencilIcon class="w-4 h-4"/>
               </Link>
@@ -147,7 +150,7 @@ import { Link, router } from '@inertiajs/vue3'
 import { ref, reactive, computed, watch} from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicateIcon} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
   sensors: Object,
@@ -155,7 +158,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       code: '', name: '', model: '', serial_number: '',
-      per_page: 10, sort: 'id', direction: 'asc', page: 1
+      per_page: 20, sort: 'id', direction: 'asc', page: 1
     })
   }
 })
@@ -212,6 +215,7 @@ const persistQuery = () => ({
 const submitSearch = () => {
   router.get(route('sensors.index'), { ...persistQuery(), page: 1 }, {
     preserveState: true,
+    replace: true,
     onSuccess: () => resetSelectedIds()
   })
 }
@@ -220,6 +224,7 @@ const submitSearch = () => {
 const goPage = (page) => {
   router.get(route('sensors.index'), { ...persistQuery(), page }, {
     preserveState: true,
+    replace: true,
     onSuccess: () => resetSelectedIds()
   })
 }
@@ -232,9 +237,9 @@ const sortBy = (field) => {
 }
 
 // 行単位削除
-const deleteSensor = (id) => {
+const deleteSensor = (sensor_id) => {
   if (!confirm(t('confirm_delete'))) return
-  router.delete(route('sensors.destroy', id), {
+  router.delete(route('sensors.destroy', sensor_id), {
     preserveState: true,
     onSuccess: () => {
       router.get(route('sensors.index'), { ...persistQuery(), page: props.sensors.current_page }, { preserveState: true })
@@ -254,6 +259,12 @@ const bulkDelete = () => {
         router.get(route('sensors.index'), { ...persistQuery(), page: props.sensors.current_page }, { preserveState: true })
       }
     }
+  )
+}
+// コピー機能追加
+const copySensor = (sensor_id) => {
+  router.get(
+    route('sensors.create', { ...persistQuery(), mode: 'copy', sensor_id })
   )
 }
 
