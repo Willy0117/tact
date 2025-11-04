@@ -9,6 +9,19 @@ use Illuminate\Http\Request;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::resource('users', UserController::class);
+    // Tenant
+    Route::resource('tenants', \App\Http\Controllers\TenantController::class);
+    Route::post('tenants/bulk-delete', [\App\Http\Controllers\TenantController::class, 'bulkDelete'])->name('tenants.bulkDelete');
+    // Role
+    Route::resource('roles', \App\Http\Controllers\RoleController::class);
+    Route::post('roles/bulk-delete', [\App\Http\Controllers\RoleController::class, 'bulkDelete'])->name('roles.bulkDelete');
+
+    // Permission
+    Route::resource('permissions', \App\Http\Controllers\PermissionController::class);
+    Route::post('permissions/bulk-delete', [\App\Http\Controllers\PermissionController::class, 'bulkDelete'])->name('permissions.bulkDelete');
+
     // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');

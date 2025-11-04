@@ -14,28 +14,52 @@
           ></textarea>
           <div v-if="errors.dish_name" class="text-red-500 text-sm">{{ errors.dish_name }}</div>
         </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- 配膳日 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('serving_date') }}</label>
+            <div class="relative">
+              <input
+                v-model="form.serving_date"
+                type="date"
+                class="border rounded px-3 py-2 w-full pr-10"
+              />
+              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
+                <CalendarIcon class="w-5 h-5" />
+              </span>
+            </div>
+          </div>
 
-        <!-- 配膳日 -->
-        <div>
-          <label class="block">{{ t('serving_date') }}</label>
-          <input v-model="form.serving_date" type="date" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.serving_date" class="text-red-500 text-sm">{{ errors.serving_date }}</div>
+          <!-- 配膳時間 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('serving_time') }}</label>
+            <div class="relative">
+              <input
+                v-model="form.serving_time"
+                type="time"
+                class="border rounded px-3 py-2 w-full pr-10"
+              />
+              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
+                <ClockIcon class="w-5 h-5" />
+              </span>
+            </div>
+          </div>
+
+          <!-- 調理日 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('cooking_date') }}</label>
+            <div class="relative">
+              <input
+                v-model="form.cooking_date"
+                type="date"
+                class="border rounded px-3 py-2 w-full pr-10"
+              />
+              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
+                <CalendarIcon class="w-5 h-5" />
+              </span>
+            </div>
+          </div>
         </div>
-
-        <!-- 配膳時間 -->
-        <div>
-          <label class="block">{{ t('serving_time') }}</label>
-          <input v-model="form.serving_time" type="time" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.serving_time" class="text-red-500 text-sm">{{ errors.serving_time }}</div>
-        </div>
-
-        <!-- 調理日 -->
-        <div>
-          <label class="block">{{ t('cooking_date') }}</label>
-          <input v-model="form.cooking_date" type="date" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.cooking_date" class="text-red-500 text-sm">{{ errors.cooking_date }}</div>
-        </div>
-
         <!-- 材料 -->
         <div>
           <label class="block">{{ t('materials') }}</label>

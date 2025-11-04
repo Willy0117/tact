@@ -77,20 +77,16 @@ const weekdayJP = (dateStr) => {
   const d = dayjs(dateStr).day() // 0 Sun ... 6 Sat
   return ['日','月','火','水','木','金','土'][d]
 }
+
 const formatTime = (timeStr) => {
-  if (!timeStr) return ''
-  return dayjs(`1970-01-01 ${timeStr}`, [
-    'YYYY-MM-DD HH:mm:ss',
-    'YYYY-MM-DD HH:mm',
-    'HH:mm:ss',
-    'HH:mm'
-  ]).format('HH:mm')
+  return timeStr ? timeStr.slice(0, 5) : ''
 }
+
 const truncate = (text = '', max = 20) => {
   const s = String(text)
   return s.length > max ? s.slice(0, max) + '…' : s
 }
-console.log(JSON.stringify(props.menuData, null, 2))
+
 </script>
 
 <style scoped>

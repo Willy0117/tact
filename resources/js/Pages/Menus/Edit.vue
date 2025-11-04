@@ -10,28 +10,52 @@
           <textarea v-model="form.dish_name" class="border rounded px-3 py-2 w-full" rows="2"></textarea>
           <div v-if="errors.dish_name" class="text-red-500 text-sm">{{ errors.dish_name }}</div>
         </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- 配膳日 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('serving_date') }}</label>
+            <div class="relative">
+              <input
+                v-model="form.serving_date"
+                type="date"
+                class="border rounded px-3 py-2 w-full pr-10"
+              />
+              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
+                <CalendarIcon class="w-5 h-5" />
+              </span>
+            </div>
+          </div>
 
-        <!-- 配膳日 -->
-        <div>
-          <label class="block">{{ t('serving_date') }}</label>
-          <input v-model="form.serving_date" type="date" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.serving_date" class="text-red-500 text-sm">{{ errors.serving_date }}</div>
+          <!-- 配膳時間 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('serving_time') }}</label>
+            <div class="relative">
+              <input
+                v-model="form.serving_time"
+                type="time"
+                class="border rounded px-3 py-2 w-full pr-10"
+              />
+              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
+                <ClockIcon class="w-5 h-5" />
+              </span>
+            </div>
+          </div>
+
+          <!-- 調理日 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('cooking_date') }}</label>
+            <div class="relative">
+              <input
+                v-model="form.cooking_date"
+                type="date"
+                class="border rounded px-3 py-2 w-full pr-10"
+              />
+              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
+                <CalendarIcon class="w-5 h-5" />
+              </span>
+            </div>
+          </div>
         </div>
-
-        <!-- 配膳時間 -->
-        <div>
-          <label class="block">{{ t('serving_time') }}</label>
-          <input v-model="form.serving_time" type="time" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.serving_time" class="text-red-500 text-sm">{{ errors.serving_time }}</div>
-        </div>
-
-        <!-- 調理日 -->
-        <div>
-          <label class="block">{{ t('cooking_date') }}</label>
-          <input v-model="form.cooking_date" type="date" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.cooking_date" class="text-red-500 text-sm">{{ errors.cooking_date }}</div>
-        </div>
-
         <!-- 材料 -->
         <div>
           <label class="block">{{ t('materials') }}</label>
@@ -61,6 +85,7 @@ import AppLayout from '@/Layouts/AppLayout.vue'
 import { reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { router } from '@inertiajs/vue3'
+import { CalendarIcon, ClockIcon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
 
@@ -71,9 +96,9 @@ const props = defineProps({
 
 const form = reactive({
   dish_name: props.menu.dish_name,
-  serving_date: props.menu.serving_date,
+  serving_date: props.menu.serving_date ? props.menu.serving_date.slice(0, 10) : '',
   serving_time: props.menu.serving_time,
-  cooking_date: props.menu.cooking_date,
+  cooking_date: props.menu.cooking_date ? props.menu.cooking_date.slice(0, 10) : '',
   materials: props.menu.materials
 })
 

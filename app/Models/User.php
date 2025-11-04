@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
@@ -19,7 +20,7 @@ class User extends Authenticatable
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
-
+    use HasRoles;
     /**
      * The attributes that are mass assignable.
      *
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'tenant_id',
     ];
 
     /**
@@ -63,5 +65,38 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+   // User → Role (pivot に tenant_id)
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class)->withPivot('tenant_id');
+    }
+
+    // User → Permission (pivot に tenant_id)
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class)->withPivot('tenant_id');
+    }
+
+    // Tenant リレーション
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * ログインユーザーの tenant_id でフィルターしたロールを取得
+     */
+    public function tenantRoles()
+    {
+        return $this->roles()->wherePivot('tenant_id', $this->tenant_id);
+    }
+
+    /**
+     * ログインユーザーの tenant_id でフィルターした権限を取得
+     */
+    public function tenantPermissions()
+    {
+        return $this->permissions()->wherePivot('tenant_id', $this->tenant_id);
     }
 }

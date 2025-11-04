@@ -73,6 +73,20 @@
   "device": "機器",
   "sensor": "測定機器",
   "role": "権限",
-  "api_tokens": "APIトークン"
+  "api_tokens": "APIトークン",
+  "users_list": "ユーザー一覧",
+  "create_user": "ユーザー作成",
+  "edit_user": "ユーザー編集",
+  "name": "名前",
+  "email": "メールアドレス",
+  "password": "パスワード",
+  "search": "検索",
+  "reset": "リセット",
+  "delete": "削除",
+  "no_records": "データがありません",
+  "leave_blank_to_keep": "※空欄の場合は変更されません",
+  "user has been created.": "ユーザーを作成しました。",
+  "user has been updated.": "ユーザーを更新しました。",
+  "user has been deleted.": "ユーザーを削除しました。"
 }
 
