@@ -18,7 +18,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Operators 
     Route::resource('operators', \App\Http\Controllers\OperatorController::class);
     Route::post('operator/bulk-delete', [\App\Http\Controllers\OperatorController::class, 'bulkDelete'])->name('operators.bulkDelete');
+
     // Menus
+    Route::get('menus/weekly', [\App\Http\Controllers\MenuController::class, 'weekly'])->name('menus.weekly');
+    Route::get('menus/import', [\App\Http\Controllers\MenuController::class, 'importExcel'])->name('menus.import');
+
     Route::resource('menus', \App\Http\Controllers\MenuController::class);
     Route::post('menus/bulk-delete', [\App\Http\Controllers\MenuController::class, 'bulkDelete'])->name('menus.bulkDelete');
 

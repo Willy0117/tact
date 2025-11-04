@@ -150,5 +150,44 @@ class MenuController extends Controller
         Menu::whereIn('id', $request->ids)->delete();
         return redirect()->route('menus.index')->with('success', __('Selected menus have been deleted.'));
     }
+    // EXCEL IMPORT
+    public function importExcel()
+    {
+        // Excel取込画面を返す
+        return view('menus.import');
+    }
+
+    
+    public function weekly()
+    {
+        $startDate = now()->startOfWeek();
+        $endDate = $startDate->copy()->addDays(6);
+
+        // メニューを取得し「日付 → 時間 → 配列」に変換
+        $menus = Menu::whereBetween('serving_date', [$startDate, $endDate])
+            ->orderBy('serving_time')
+            ->get()
+            ->groupBy(function ($menu) {
+                return $menu->serving_date->toDateString();
+            })
+            ->map(function ($dayGroup) {
+                return $dayGroup->groupBy(function ($menu) {
+                    return \Carbon\Carbon::parse($menu->serving_time)->format('H:i'); // ← 秒削除
+                });
+            });
+
+        // distinct で使用する時間も同様に "HH:MM" に揃える
+        $servingTimes = Menu::whereBetween('serving_date', [$startDate, $endDate])
+            ->selectRaw("DATE_FORMAT(serving_time, '%H:%i') as serving_time")
+            ->distinct()
+            ->orderBy('serving_time')
+            ->pluck('serving_time');
+
+        return Inertia::render('Menus/Weekly', [
+            'menuData' => $menus,
+            'servingTimes' => $servingTimes,
+            'weekStart' => $startDate->toDateString(),
+        ]);
+    }
 
 }
