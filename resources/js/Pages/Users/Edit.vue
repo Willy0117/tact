@@ -25,6 +25,18 @@
           <div v-if="errors.password" class="text-red-600 text-sm">{{ errors.password }}</div>
         </div>
 
+        <!-- ✅ Role Selection -->
+        <div>
+          <label class="block mb-1">{{ t('role') }}</label>
+          <select v-model="form.role" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('no_role') }}</option>
+            <option v-for="role in roles" :key="role.id" :value="role.name">
+              {{ role.name }}
+            </option>
+          </select>
+          <div v-if="errors.role" class="text-red-600 text-sm">{{ errors.role }}</div>
+        </div>
+
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
           {{ t('update') }}
         </button>
@@ -42,13 +54,16 @@ import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
 const props = defineProps({
-  user: Object
+  user: Object,
+  roles: Array,
+  currentRole: String,
 })
 
 const form = useForm({
   name: props.user.name,
   email: props.user.email,
-  password: ''
+  password: '',
+  role: props.currentRole ?? null, // ✅ 現在のロール or null
 })
 
 const errors = reactive({})
@@ -59,3 +74,4 @@ const submit = () => {
   })
 }
 </script>
+

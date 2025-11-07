@@ -1,10 +1,23 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 
 // Heroicons
-import { HomeIcon, UserIcon, ServerIcon, UsersIcon, PlusIcon, BuildingOfficeIcon, TicketIcon, ArrowRightOnRectangleIcon, Cog6ToothIcon, CubeIcon, BeakerIcon } from '@heroicons/vue/24/outline'
+import {
+  HomeIcon,
+  UserIcon,
+  ServerIcon,
+  UsersIcon,
+  PlusIcon,
+  BuildingOfficeIcon,
+  TicketIcon,
+  ArrowRightOnRectangleIcon,
+  Cog6ToothIcon,
+  CubeIcon,
+  BeakerIcon,
+  ShieldCheckIcon, // ← 追加
+} from '@heroicons/vue/24/outline'
 
 const { props } = usePage()
 
@@ -46,7 +59,39 @@ watch(collapsed, val => { localStorage.setItem('sidebar-collapsed', JSON.stringi
 const logout = () => { router.post(route('logout')) }
 const switchTeam = (team) => { router.put(route('current-team.update'), { team_id: team.id }) }
 const isActive = (name) => route().current(name)
+
+// ---------------------------
+// Permission helper (Vue側)
+// ---------------------------
+const user = usePage().props.auth.user || null
+
+console.log(user)
+
+// can(permission) : Vue 側で簡易チェック
+const can = (permissionName) => {
+  if (!user) return false
+  // user.permissions が配列で渡されている前提（HandleInertiaRequests で load('permissions') している）
+  if (Array.isArray(user.permissions)) {
+    return user.permissions.some(p => p.name === permissionName)
+  }
+  // もし permissions がコレクションオブジェクトとして渡っている場合の安全策
+  if (user.permissions && typeof user.permissions.some === 'function') {
+    try { return user.permissions.some(p => p.name === permissionName) } catch { /* ignore */ }
+  }
+  // fallback: role ベースチェック
+  if (Array.isArray(user.roles)) {
+    // 例えば Super Admin ロールがあれば全部許可する設計ならここでチェック
+    return user.roles.some(r => r.name === 'Super Admin' || r.name === 'super-admin')
+  }
+  return false
+}
+
+// showAccessControl : セクション丸ごと表示判定
+const showAccessControl = computed(() => {
+  return can('manage tenants') || can('manage roles') || can('manage permissions')
+})
 </script>
+
 
 <template>
   <div class="flex min-h-screen bg-gray-100">
@@ -67,13 +112,6 @@ const isActive = (name) => route().current(name)
               :class="isActive('dashboard') ? 'bg-gray-300 font-semibold' : ''">
           <HomeIcon class="w-5 h-5"/>
           <span v-if="!collapsed" class="ml-2">{{ t('dashboard') }}</span>
-        </Link>
-    <!-- SaaS 会社管理メニュー -->
-        <Link :href="route('admin.companies.index')"
-              class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
-              :class="isActive('companies') ? 'bg-gray-300 font-semibold' : ''">
-          <BuildingOfficeIcon class="w-5 h-5" />
-          <span v-if="!collapsed" class="ml-2">{{ t('companies') }}</span>
         </Link>
         <!-- 献立関連メニュー -->
         <button @click="toggleSubMenu('menus')"
@@ -142,7 +180,55 @@ const isActive = (name) => route().current(name)
               </button -->
             </div>
           </transition>
+<!-- Access Control -->
+<template v-if="showAccessControl">
+  <button @click="toggleSubMenu('access')"
+          class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+    <div class="flex items-center">
+      <ShieldCheckIcon class="w-5 h-5"/>
+      <span v-if="!collapsed" class="ml-2">{{ t('access_control') }}</span>
+    </div>
+    <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='access'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  </button>
+
+  <transition name="slide-fade">
+    <div v-show="openSubMenu==='access' && !collapsed" class="pl-6 mt-1 space-y-1">
+      <Link
+        v-if="can('manage tenants')"
+        :href="route('tenants.index')"
+        class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+        :class="isActive('tenants.index') ? 'bg-gray-200 font-semibold' : ''"
+      >
+        <BuildingOfficeIcon class="w-4 h-4 mr-1"/>
+        {{ t('tenants') }}
+      </Link>
+
+      <Link
+        v-if="can('manage roles')"
+        :href="route('roles.index')"
+        class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+        :class="isActive('roles.index') ? 'bg-gray-200 font-semibold' : ''"
+      >
+        <UsersIcon class="w-4 h-4 mr-1"/>
+        {{ t('roles') }}
+      </Link>
+
+      <Link
+        v-if="can('manage permissions')"
+        :href="route('permissions.index')"
+        class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+        :class="isActive('permissions.index') ? 'bg-gray-200 font-semibold' : ''"
+      >
+        <TicketIcon class="w-4 h-4 mr-1"/>
+        {{ t('permissions') }}
+      </Link>
+    </div>
+  </transition>
+</template>
           <!-- ここからマスター系メニュー -->
+
           <button @click="toggleSubMenu('masters')"
                   class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
             <div class="flex items-center">

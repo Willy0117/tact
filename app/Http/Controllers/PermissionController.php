@@ -3,19 +3,23 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Permission;
 use Inertia\Inertia;
+use App\Models\Permission;
+use App\Models\Tenant;
+//use Spatie\Permission\Exceptions\PermissionAlreadyExists;
 
 class PermissionController extends Controller
 {
+    /**
+     * 一覧画面
+     */
     public function index(Request $request)
     {
         $user = $request->user();
-
         $query = Permission::query();
 
-        // テナント絞り込み（Super Admin は全権限表示）
-        if ($user->tenant_id) {
+        // テナント絞り込み（Super Admin は全件表示）
+        if (!$user->hasRole('Super Admin')) {
             $query->where('tenant_id', $user->tenant_id);
         }
 
@@ -31,64 +35,133 @@ class PermissionController extends Controller
 
         // ページネーション
         $permissions = $query->paginate($request->input('per_page', 20))
-            ->withQueryString();
+                             ->withQueryString();
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         return Inertia::render('Permissions/Index', [
             'permissions' => $permissions,
-            'filters' => $request->all()
+            'filters' => $request->all(),
+            'tenants' => $tenants,
+            'user' => $user, // Vue 側で判定に必要
         ]);
     }
-
-    public function create()
-    {
-        // Edit.vue と兼用する場合は不要
-    }
-
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name,NULL,id,tenant_id,' . $request->user()->tenant_id,
-        ]);
-
-        $permission = new Permission();
-        $permission->name = $request->name;
-        $permission->tenant_id = $request->user()->tenant_id;
-        $permission->guard_name = 'web';
-        $permission->save();
-
-        return redirect()->route('permissions.index', $request->filters ?? []);
-    }
-
+    /**
+     * 編集画面用
+     */
     public function edit(Permission $permission)
     {
-        // Edit.vue で props として渡す
+        $user = auth()->user()->load('roles');
+
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
+
+        return Inertia::render('Permissions/Edit', [
+            'permission' => $permission,
+            'tenants' => $tenants,
+            'user' => $user,
+        ]);
     }
 
-    public function update(Request $request, Permission $permission)
+    /**
+     * 新規作成画面用
+     */
+    public function create()
     {
+        $user = auth()->user()->load('roles');
+
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
+
+        return Inertia::render('Permissions/Edit', [
+            'permission' => null,
+            'tenants' => $tenants,
+            'user' => $user,
+            'filters' => request()->all(),
+        ]);
+    }
+
+    /**
+     * 新規作成
+     */
+    public function store(Request $request)
+    {
+        $user = $request->user();
+
+        $tenantId = $user->hasRole('Super Admin') ? $request->tenant_id : $user->tenant_id;
+
         $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name,' . $permission->id . ',id,tenant_id,' . $request->user()->tenant_id,
+            'name' => 'required|string|max:255',
+            'tenant_id' => 'nullable|exists:tenants,id',
         ]);
 
+        // Teams モード対応: tenant_id を考慮して create
+        Permission::firstOrCreate(
+            [
+                'name' => $request->name,
+                'guard_name' => 'web',
+                'tenant_id' => $tenantId
+            ]
+        );
+
+        return redirect()->route('permissions.index', $request->filters ?? []);
+    }
+
+    /**
+     * 更新
+     */
+    public function update(Request $request, Permission $permission)
+    {
+        $user = $request->user();
+
+        $tenantId = $user->hasRole('Super Admin') ? $request->tenant_id : $user->tenant_id;
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'tenant_id' => 'nullable|exists:tenants,id',
+        ]);
+
+        // Teams モード対応: tenant_id を考慮して更新（同じ tenant 内で name 重複しないように）
+        $exists = Permission::where('name', $request->name)
+            ->where('guard_name', 'web')
+            ->where('tenant_id', $tenantId)
+            ->where('id', '!=', $permission->id)
+            ->first();
+
+        if ($exists) {
+            return back()->withErrors(['name' => '同じテナント内で既に存在する権限です']);
+        }
+
         $permission->update([
-            'name' => $request->name
+            'name' => $request->name,
+            'tenant_id' => $tenantId,
+            'guard_name' => 'web',
         ]);
 
         return redirect()->route('permissions.index', $request->filters ?? []);
     }
 
+    /**
+     * 削除
+     */
     public function destroy(Permission $permission)
     {
         $permission->delete();
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         return redirect()->route('permissions.index');
     }
 
+    /**
+     * 複数削除
+     */
     public function bulkDelete(Request $request)
     {
         $ids = $request->input('ids', []);
         Permission::whereIn('id', $ids)->delete();
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         return redirect()->route('permissions.index');
     }
 }
+
+
+
+

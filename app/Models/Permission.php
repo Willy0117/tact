@@ -1,31 +1,30 @@
 <?php
+    namespace App\Models;
 
-namespace App\Models;
+    use Spatie\Permission\Models\Permission as SpatiePermission;
 
-use Spatie\Permission\Models\Permission as SpatiePermission;
-
-class Permission extends SpatiePermission
-{
-    protected $fillable = [
-        'name',
-        'guard_name',
-        'tenant_id', // 追加
-    ];
-
-    /**
-     * Tenant リレーション
-     */
-    public function tenant()
+    class Permission extends SpatiePermission
     {
-        return $this->belongsTo(Tenant::class);
-    }
+        protected $fillable = [
+            'name',
+            'guard_name',
+            'tenant_id', // tenant_id を追加
+        ];
 
-    /**
-     * Tenant スコープ
-     */
-    public function scopeOfTenant($query, $tenantId)
-    {
-        return $query->where('tenant_id', $tenantId);
-    }
-}
+        /**
+         * テナントごとのスコープ
+         */
+        public function scopeOfTenant($query, $tenantId)
+        {
+            return $query->where('tenant_id', $tenantId);
+        }
 
+        /**
+         * Tenant リレーション
+         */
+        public function tenant()
+        {
+            return $this->belongsTo(Tenant::class);
+        }
+    }
+?>

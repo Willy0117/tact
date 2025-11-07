@@ -87,6 +87,10 @@
   "leave_blank_to_keep": "※空欄の場合は変更されません",
   "user has been created.": "ユーザーを作成しました。",
   "user has been updated.": "ユーザーを更新しました。",
-  "user has been deleted.": "ユーザーを削除しました。"
+  "user has been deleted.": "ユーザーを削除しました。",
+  "access_control": "アクセス管理",
+  "roles": "ロール",
+  "permissions": "パーミッション",
+  "tenants": "テナント"
 }
 

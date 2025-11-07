@@ -85,6 +85,11 @@
               {{ t('tenant_id') }}
               <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('role')">
+              {{ t('role') }}
+              <span v-if="form.sort==='role'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>
+
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
@@ -98,6 +103,7 @@
             <td class="px-3 py-2">{{ user.name }}</td>
             <td class="px-3 py-2">{{ user.email }}</td>
             <td class="px-3 py-2">{{ user.tenant_id }}</td>
+            <td class="px-3 py-2">{{ user.roles[0]?.name || '-' }}</td>
             <td class="px-3 py-2">{{ user.updated_at ? dayjs(user.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copyUser(user.id)" class="text-green-500 hover:text-green-700">

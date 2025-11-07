@@ -76,12 +76,10 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-// フォーム初期値
 const form = reactive({
-  name: props.role ? props.role.name : '',
-  permissions: props.role ? props.role.permissions.map(p => p.id) : []
+  name: props.role?.name || '',
+  permissions: props.role?.permissions?.map(p => p.id) || []
 })
-
 // エラー管理
 const errors = reactive({
   name: '',

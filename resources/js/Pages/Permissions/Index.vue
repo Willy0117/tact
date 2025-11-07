@@ -36,6 +36,7 @@
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
+            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">{{ t('name') }}
               <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
@@ -48,6 +49,9 @@
             <td class="px-3 py-2">
               <input type="checkbox" :value="permission.id" v-model="selectedIds" />
             </td>
+            <td v-if="isSuperAdmin">
+              {{ tenants.find(t => t.id === permission.tenant_id)?.name || '-' }}
+            </td>            
             <td class="px-3 py-2">{{ permission.name }}</td>
             <td class="px-3 py-2 text-center">{{ permission.updated_at ? dayjs(permission.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
@@ -81,6 +85,8 @@ import { PlusIcon, PencilIcon, TrashIcon, DocumentDuplicateIcon } from '@heroico
 
 const props = defineProps({
   permissions: Object,
+  tenants: Array, // Super Admin 用
+  user: Object,   // ← これが必要  
   filters: {
     type: Object,
     default: () => ({
@@ -94,6 +100,11 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
+
 const form = reactive({
   name: props.filters.name,
   per_page: props.filters.per_page,

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -76,13 +76,18 @@ class RoleController extends Controller
             abort(403);
         }
 
+        // 全権限取得
         $permissions = Permission::all();
+
+        // role の permissions を eager load
+        $role->load('permissions');
 
         return Inertia::render('Roles/Edit', [
             'role' => $role,
             'permissions' => $permissions,
         ]);
     }
+
 
     public function update(Request $request, Role $role)
     {
