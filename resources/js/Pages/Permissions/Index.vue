@@ -61,6 +61,10 @@
               <Link :href="route('permissions.edit', { permission: permission.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
                 <PencilIcon class="w-4 h-4"/>
               </Link>
+             <!-- 新規: 割り当てボタン -->
+              <Link :href="route('permissions.assign', permission.id)" class="text-green-500 hover:text-green-700">
+                <UserIcon class="w-4 h-4" />
+              </Link>
               <button @click="deletePermission(permission.id)" class="text-red-500 hover:text-red-700">
                 <TrashIcon class="w-4 h-4"/>
               </button>
@@ -81,7 +85,7 @@ import { Link, router } from '@inertiajs/vue3'
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import { PlusIcon, PencilIcon, TrashIcon, DocumentDuplicateIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, DocumentDuplicateIcon, UserIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
   permissions: Object,

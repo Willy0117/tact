@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Role::query();
+        $user = Auth::user();
 
-        // Super Admin は全テナント、それ以外は自テナント
-        if (!Auth::user()->hasRole('Super Admin')) {
-            $query->where('tenant_id', Auth::user()->tenant_id);
+        $query = Role::with('permissions');
+
+        if (! $user->hasRole('Super Admin')) {
+            $query->where('tenant_id', $user->tenant_id);
         }
 
         // 検索
@@ -25,13 +25,12 @@ class RoleController extends Controller
             $query->where('name', 'like', "%{$request->search}%");
         }
 
-        // ソート
+        // ソート・ページング（既存のフィルタ名に合わせる）
         $sortField = $request->get('sort', 'id');
         $sortOrder = $request->get('order', 'desc');
-        $query->orderBy($sortField, $sortOrder);
 
-        // ページネーション
-        $roles = $query->paginate($request->get('per_page', 10))
+        $roles = $query->orderBy($sortField, $sortOrder)
+                       ->paginate($request->get('per_page', 10))
                        ->withQueryString();
 
         return Inertia::render('Roles/Index', [
@@ -42,61 +41,77 @@ class RoleController extends Controller
 
     public function create()
     {
-        $permissions = Permission::all();
+        $user = Auth::user();
+
+        $permissions = $user->hasRole('Super Admin')
+            ? Permission::all()
+            : Permission::where('tenant_id', $user->tenant_id)->orWhereNull('tenant_id')->get();
+
+        // Super Admin がテナントを選べるよう tenants は必要なら追加して渡してください（既にある構成に合わせて）
         return Inertia::render('Roles/Edit', [
             'role' => null,
             'permissions' => $permissions,
+            'user' => $user,
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
+        $tenantId = $user->hasRole('Super Admin')
+            ? ($request->tenant_id ?? null)
+            : $user->tenant_id;
+
         $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,NULL,id,tenant_id,' . Auth::user()->tenant_id,
+            'name' => 'required|string|max:255|unique:roles,name,NULL,id,tenant_id,' . ($tenantId ?? 'NULL'),
             'permissions' => 'array',
         ]);
 
         $role = Role::create([
             'name' => $request->name,
-            'tenant_id' => Auth::user()->tenant_id,
+            'tenant_id' => $tenantId,
+            'guard_name' => 'web',
         ]);
 
-        if ($request->has('permissions')) {
+        if ($request->filled('permissions')) {
             $role->syncPermissions($request->permissions);
         }
 
-        return redirect()->route('roles.index')
-                         ->with('success', __('Role created successfully.'));
+        return redirect()->route('roles.index')->with('success', __('Role created successfully.'));
     }
 
     public function edit(Role $role)
     {
-        // 自テナント Role のみ編集可能（Super Admin 除く）
-        if (!Auth::user()->hasRole('Super Admin') && $role->tenant_id != Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        if (! $user->hasRole('Super Admin') && $role->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
-        // 全権限取得
-        $permissions = Permission::all();
+        $permissions = $user->hasRole('Super Admin')
+            ? Permission::all()
+            : Permission::where('tenant_id', $user->tenant_id)->orWhereNull('tenant_id')->get();
 
-        // role の permissions を eager load
         $role->load('permissions');
 
         return Inertia::render('Roles/Edit', [
             'role' => $role,
             'permissions' => $permissions,
+            'user' => $user,
         ]);
     }
 
-
     public function update(Request $request, Role $role)
     {
-        if (!Auth::user()->hasRole('Super Admin') && $role->tenant_id != Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        if (! $user->hasRole('Super Admin') && $role->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $role->id . ',id,tenant_id,' . $role->tenant_id,
+            'name' => 'required|string|max:255|unique:roles,name,' . $role->id . ',id,tenant_id,' . ($role->tenant_id ?? 'NULL'),
             'permissions' => 'array',
         ]);
 
@@ -104,22 +119,22 @@ class RoleController extends Controller
             'name' => $request->name,
         ]);
 
-        $role->syncPermissions($request->permissions);
+        $role->syncPermissions($request->permissions ?? []);
 
-        return redirect()->route('roles.index')
-                         ->with('success', __('Role updated successfully.'));
+        return redirect()->route('roles.index')->with('success', __('Role updated successfully.'));
     }
 
     public function destroy(Role $role)
     {
-        if (!Auth::user()->hasRole('Super Admin') && $role->tenant_id != Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        if (! $user->hasRole('Super Admin') && $role->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
         $role->delete();
 
-        return redirect()->route('roles.index')
-                         ->with('success', __('Role deleted successfully.'));
+        return redirect()->route('roles.index')->with('success', __('Role deleted successfully.'));
     }
 
     public function bulkDelete(Request $request)

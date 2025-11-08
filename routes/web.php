@@ -18,6 +18,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('roles', \App\Http\Controllers\RoleController::class);
     Route::post('roles/bulk-delete', [\App\Http\Controllers\RoleController::class, 'bulkDelete'])->name('roles.bulkDelete');
 
+    // 権限割当フォーム（GET）
+    Route::get('permissions/{permission}/assign', [\App\Http\Controllers\PermissionController::class, 'assign'])
+        ->name('permissions.assign');
+
+    // 権限割当実行（POST）
+    Route::post('permissions/{permission}/assign', [\App\Http\Controllers\PermissionController::class, 'assignStore'])
+        ->name('permissions.assign.store');
+
     // Permission
     Route::resource('permissions', \App\Http\Controllers\PermissionController::class);
     Route::post('permissions/bulk-delete', [\App\Http\Controllers\PermissionController::class, 'bulkDelete'])->name('permissions.bulkDelete');

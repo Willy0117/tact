@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Permission;
 use App\Models\Tenant;
+use App\Models\User; // ← これを追加！
+
 //use Spatie\Permission\Exceptions\PermissionAlreadyExists;
 
 class PermissionController extends Controller
@@ -136,6 +138,37 @@ class PermissionController extends Controller
         ]);
 
         return redirect()->route('permissions.index', $request->filters ?? []);
+    }
+
+    public function assign(Request $request, Permission $permission)
+    {
+        $user = $request->user();
+
+        $users = User::query()
+            ->where('tenant_id', $user->tenant_id)
+            ->get(['id', 'name', 'email']);
+
+        return Inertia::render('Permissions/Assign', [
+            'permission' => $permission,
+            'users' => $users,
+            'filters' => $request->all(), // 前提条件保持
+        ]);
+    }
+
+    // 割当保存（POST）
+    public function assignStore(Request $request, Permission $permission)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $targetUser = User::findOrFail($validated['user_id']);
+
+        // 権限付与（Permission model インスタンスを渡してOK）
+        $targetUser->givePermissionTo($permission);
+
+        return redirect()->route('permissions.index', $request->all())
+            ->with('success', __('Permission assigned.'));
     }
 
     /**
