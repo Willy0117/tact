@@ -103,7 +103,7 @@
             <td class="px-3 py-2">{{ user.name }}</td>
             <td class="px-3 py-2">{{ user.email }}</td>
             <td class="px-3 py-2">{{ user.tenant_id }}</td>
-            <td class="px-3 py-2">{{ user.roles[0]?.name || '-' }}</td>
+            <td class="px-3 py-2">{{ user.roles?.[0]?.name ?? '-' }}</td>
             <td class="px-3 py-2">{{ user.updated_at ? dayjs(user.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copyUser(user.id)" class="text-green-500 hover:text-green-700">

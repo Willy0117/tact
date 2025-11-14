@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('users', UserController::class);
+    Route::resource('users', \App\Http\Controllers\UserController::class);
+    Route::post('users/bulk-delete', [\App\Http\Controllers\UserController::class, 'bulkDelete'])->name('users.bulkDelete');
     // Tenant
     Route::resource('tenants', \App\Http\Controllers\TenantController::class);
     Route::post('tenants/bulk-delete', [\App\Http\Controllers\TenantController::class, 'bulkDelete'])->name('tenants.bulkDelete');
@@ -41,8 +42,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('operator/bulk-delete', [\App\Http\Controllers\OperatorController::class, 'bulkDelete'])->name('operators.bulkDelete');
 
     // Menus
+    // Import画面表示
+    Route::get('menus/import', [\App\Http\Controllers\MenuController::class, 'showImportForm'])
+        ->name('menus.import');
+
+    // Import処理
+    Route::post('menus/import', [\App\Http\Controllers\MenuController::class, 'importExcel'])
+        ->name('menus.import.store');
+
     Route::get('menus/weekly', [\App\Http\Controllers\MenuController::class, 'weekly'])->name('menus.weekly');
-    Route::get('menus/import', [\App\Http\Controllers\MenuController::class, 'importExcel'])->name('menus.import');
 
     Route::resource('menus', \App\Http\Controllers\MenuController::class);
     Route::post('menus/bulk-delete', [\App\Http\Controllers\MenuController::class, 'bulkDelete'])->name('menus.bulkDelete');

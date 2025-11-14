@@ -87,6 +87,7 @@
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
+            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
               <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
@@ -107,6 +108,9 @@
             <td class="px-3 py-2">
               <input type="checkbox" :value="operator.id" v-model="selectedIds" />
             </td>
+            <td v-if="isSuperAdmin">
+              {{ tenants.find(t => t.id === operator.tenant_id)?.name || '-' }}
+            </td>            
             <td class="px-3 py-2">{{ operator.code }}</td>
             <td class="px-3 py-2">{{ operator.name }}</td>
             <td class="px-3 py-2">{{ operator.updated_at ? dayjs(operator.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
@@ -144,6 +148,8 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicate
 
 const props = defineProps({
   operators: Object,
+  tenants: Array, // Super Admin 用
+  user: Object,   // ← これが必要  
   filters: {
     type: Object,
     default: () => ({
@@ -155,6 +161,9 @@ const props = defineProps({
 
 const { t } = useI18n()
 
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 // 検索フォーム・per_page・sort・directionを reactive で管理
 const openDrawer = ref(false)
 

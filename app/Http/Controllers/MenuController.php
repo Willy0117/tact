@@ -6,13 +6,26 @@ use App\Models\Menu;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
+use App\Models\Tenant;
+use App\Models\User; // ← これを追加！
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class MenuController extends Controller
 {
     // 一覧ページ
     public function index(Request $request)
     {
+        $user = $request->user();
+
         $query = Menu::query();
+        // テナント絞り込み（Super Admin は全件表示）
+        if (!$user->hasRole('Super Admin')) {
+            $query->where('tenant_id', $user->tenant_id);
+        }
         if ($dish_name = $request->input('dish_name')) {
             $query->where('dish_name', 'like', "%{$dish_name}%");
         }
@@ -41,6 +54,8 @@ class MenuController extends Controller
         // ページあたり件数
         $perPage = intval($request->input('per_page', 10));
 
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+
         $menus = Menu::query()
             ->when($request->dish_name, fn($q, $v) => $q->where('dish_name', 'like', "%$v%"))
             ->when($request->process, fn($q, $v) => $q->where('process', 'like', "%$v%"))
@@ -55,6 +70,8 @@ class MenuController extends Controller
 
         return Inertia::render('Menus/Index', [
             'menus' => $menus,
+            'tenants' => $tenants,
+            'user' => $user, // Vue 側で判定に必要
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
@@ -66,6 +83,10 @@ class MenuController extends Controller
     // Create 画面
     public function create(Request $request)
     {
+        $user = $request->user();
+
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+
         $menu = null;
 
         // コピー用モードの場合
@@ -80,22 +101,33 @@ class MenuController extends Controller
                 'dish_name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
             ]),
             'menu' => $menu, // コピー元のデータを渡す
+            'tenants' => $tenants,
+            'user' => $user, // Vue 側で判定に必要
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'serving_date' => ['required','date'],
             'serving_time' => ['required','string'],
             'dish_name' => ['required','string'],
             'process' => ['nullable','string'],
+            'materials' => ['nullable','string'],
             'cooking_date' => ['required','date'],
+            'tenant_id' => ['nullable', 'exists:tenants,id'], 
         ], [
             'serving_date.required' => __('validation.required', ['attribute' => __('配膳日')]),
             'dish_name.required' => __('validation.required', ['attribute' => __('料理名')]),
             'cooking_date.required' => __('validation.required', ['attribute' => __('調理日')]),
         ]);
+        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
+        $validated['tenant_id'] = $user->hasRole('Super Admin') 
+            ? $validated['tenant_id'] 
+            : $user->tenant_id;
+
         Menu::create($validated);
         return redirect()->route('menus.index', $request->only([
                 'serving_date_from', 'serving_date_to',
@@ -107,8 +139,14 @@ class MenuController extends Controller
 
     public function edit(Request $request, Menu $menu)
     {
+        $user = $request->user();
+
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+
         return Inertia::render('Menus/Edit', [
             'menu' => $menu,
+            'tenants' => $tenants,
+            'user' => $user, // Vue 側で判定に必要
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
@@ -119,17 +157,26 @@ class MenuController extends Controller
 
     public function update(Request $request, Menu $menu)
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'serving_date' => ['required','date'],
             'serving_time' => ['required','string'],
             'dish_name' => ['required','string'],
             'process' => ['nullable','string'],
+            'materials' => ['nullable','string'],
             'cooking_date' => ['required','date'],
+            'tenant_id' => ['nullable', 'exists:tenants,id'], 
         ], [
             'serving_date.required' => __('validation.required', ['attribute' => __('配膳日')]),
             'dish_name.required' => __('validation.required', ['attribute' => __('料理名')]),
             'cooking_date.required' => __('validation.required', ['attribute' => __('調理日')]),
         ]);
+        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
+        $validated['tenant_id'] = $user->hasRole('Super Admin') 
+            ? $validated['tenant_id'] 
+            : $user->tenant_id;
+
         $menu->update($validated);
 
         return redirect()->route('menus.index', $request->only([
@@ -150,13 +197,178 @@ class MenuController extends Controller
         Menu::whereIn('id', $request->ids)->delete();
         return redirect()->route('menus.index')->with('success', __('Selected menus have been deleted.'));
     }
-    // EXCEL IMPORT
-    public function importExcel()
+
+    public function showImportForm()
     {
-        // Excel取込画面を返す
-        return view('menus.import');
+        return Inertia::render('Menus/Import');
     }
 
+    public function importExcel(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['error' => '認証されていません'], 401);
+        }
+
+        $tenantId = $user->tenant_id ?? 1;
+        $menus = $request->menus ?? [];
+
+        foreach ($menus as $m) {
+            Menu::create([
+                'tenant_id' => $tenantId,
+                'dish_name' => $m['dish_name'],
+                'serving_date' => $m['serving_date'],
+                'serving_time' => $m['serving_time'],
+                'cooking_date' => $m['cooking_date'] ?? $m['serving_date'],
+                'materials' => null,
+                'disabled' => 1,
+                'display_order' => 1,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => '献立データを保存しました',
+        ]);
+    }
+/*    
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls',
+        ]);
+
+        $file = $request->file('file');
+        if (!$file) {
+            return response()->json(['error' => 'ファイルが見つかりません'], 400);
+        }
+
+        $tenantId = Auth::user()->tenant_id;
+
+        $spreadsheet = IOFactory::load($file->getRealPath());
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // 配膳日セルの位置（固定）
+        $servingCols = ['D', 'M', 'V', 'AE', 'AN', 'AW', 'BF'];
+        $servingDates = [];
+        foreach ($servingCols as $col) {
+            $cell = $sheet->getCell($col . '6')->getValue();
+            if ($cell) {
+                // 「11/2(月)」の形式を Y-m-d に変換
+                $dateStr = preg_replace('/\(.+\)/', '', $cell);
+                try {
+                    $servingDates[$col] = Carbon::parse($dateStr)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $servingDates[$col] = null;
+                }
+            } else {
+                $servingDates[$col] = null;
+            }
+        }
+
+        // データ行は7行目から開始
+        $startRow = 7;
+        $highestRow = $sheet->getHighestRow();
+
+        for ($row = $startRow; $row <= $highestRow; $row++) {
+            $mealType = $sheet->getCell('B' . $row)->getValue();
+            if (!$mealType) continue;
+
+            foreach ($servingCols as $col) {
+                $menuCell = $sheet->getCell($col . $row)->getValue();
+                if (!$menuCell) continue;
+
+                // dish_name = B列（食事区分） + 献立メニュー
+                $dishName = trim($mealType . ' ' . $menuCell);
+
+                // 配膳日
+                $servingDate = $servingDates[$col];
+                if (!$servingDate) continue;
+
+                // 調理日は列 offset で K列や T列など
+                $cookingCol = $this->getCookingCol($col); // 下記で定義
+                $cookingCell = $sheet->getCell($cookingCol . $row)->getValue();
+
+                $cookingDate = null;
+                if ($cookingCell !== null && $cookingCell !== '') {
+                    try {
+                        if (is_numeric($cookingCell)) {
+                            $cookingDate = ExcelDate::excelToDateTimeObject($cookingCell)->format('Y-m-d');
+                        } else {
+                            $cookingDate = Carbon::parse($cookingCell)->format('Y-m-d');
+                        }
+                    } catch (\Exception $e) {
+                        $cookingDate = $servingDate;
+                    }
+                } else {
+                    $cookingDate = $servingDate;
+                }
+
+                // serving_date と同じなら cooking_date を null にする
+                if ($cookingDate === $servingDate) {
+                    $cookingDate = null;
+                }
+
+                // 配膳時間判定
+                $servingTime = $this->getServingTime($mealType);
+
+                // DB登録
+                Menu::create([
+                    'tenant_id' => $tenantId,
+                    'dish_name' => $dishName,
+                    'serving_date' => $servingDate,
+                    'serving_time' => $servingTime,
+                    'cooking_date' => $cookingDate,
+                    'materials' => null,
+                    'disabled' => 1,
+                    'display_order' => 1,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => '献立データをインポートしました',
+            'fileName' => $file->getClientOriginalName()
+        ]);
+    }
+*/
+    /**
+     * 配膳日列から調理日列を返す
+     */
+    private function getCookingCol(string $servingCol): string
+    {
+        // D→K, M→T, V→AC, AE→AL, AN→AU, AW→BD, BF→BM
+        $map = [
+            'D' => 'K', 'M' => 'T', 'V' => 'AC', 'AE' => 'AL',
+            'AN' => 'AU', 'AW' => 'BD', 'BF' => 'BM'
+        ];
+        return $map[$servingCol] ?? $servingCol;
+    }
+
+    /**
+     * 食事区分から配膳時間を返す
+     */
+    private function getServingTime(string $mealType): string
+    {
+        if (preg_match('/おやつ\((\d+)\)/u', $mealType, $matches)) {
+            return sprintf('%02d:00:00', $matches[1]);
+        } elseif (str_contains($mealType, '朝')) {
+            return '08:00:00';
+        } elseif (str_contains($mealType, '昼')) {
+            return '12:00:00';
+        } elseif (str_contains($mealType, '夕')) {
+            return '18:00:00';
+        } else {
+            return '00:00:00';
+        }
+    }
+
+
+    public function importExcelStore(Request $request)
+    {
+        // アップロード処理など
+    }
     
     public function weekly()
     {

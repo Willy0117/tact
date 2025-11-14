@@ -16,6 +16,7 @@ class Operator extends Model
         'name',
         'disabled',
         'display_order',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -24,4 +25,11 @@ class Operator extends Model
     ];
 
     public $timestamps = true; // これがデフォルトで true なら created_at, updated_at が自動更新
+
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
 }

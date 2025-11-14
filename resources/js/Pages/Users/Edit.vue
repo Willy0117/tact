@@ -1,45 +1,67 @@
 <template>
   <AppLayout>
-    <template #header>{{ t('edit_user') }}</template>
+    <template #header>
+      {{ user ? t('edit_user') : t('create_user') }}
+    </template>
 
-    <div class="p-6 max-w-lg mx-auto">
-      <h2 class="text-lg font-semibold mb-4">{{ t('edit_user') }}</h2>
-
+    <div class="p-6 max-w-2xl mx-auto bg-white rounded shadow">
       <form @submit.prevent="submit" class="space-y-4">
+        <!-- 名前 -->
         <div>
-          <label class="block mb-1">{{ t('name') }}</label>
+          <label class="block mb-1 font-medium">{{ t('name') }}</label>
           <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.name" class="text-red-600 text-sm">{{ errors.name }}</div>
+          <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
         </div>
 
+        <!-- メール -->
         <div>
-          <label class="block mb-1">{{ t('email') }}</label>
+          <label class="block mb-1 font-medium">{{ t('email') }}</label>
           <input v-model="form.email" type="email" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.email" class="text-red-600 text-sm">{{ errors.email }}</div>
+          <div v-if="errors.email" class="text-red-500 text-sm">{{ errors.email }}</div>
         </div>
 
+        <!-- パスワード -->
         <div>
-          <label class="block mb-1">{{ t('password') }}</label>
+          <label class="block mb-1 font-medium">{{ t('password') }}</label>
           <input v-model="form.password" type="password" class="border rounded px-3 py-2 w-full" />
-          <div class="text-gray-500 text-sm">{{ t('leave_blank_to_keep') }}</div>
-          <div v-if="errors.password" class="text-red-600 text-sm">{{ errors.password }}</div>
+          <div v-if="errors.password" class="text-red-500 text-sm">{{ errors.password }}</div>
         </div>
 
-        <!-- ✅ Role Selection -->
         <div>
-          <label class="block mb-1">{{ t('role') }}</label>
-          <select v-model="form.role" class="border rounded px-3 py-2 w-full">
-            <option :value="null">{{ t('no_role') }}</option>
-            <option v-for="role in roles" :key="role.id" :value="role.name">
-              {{ role.name }}
+          <label class="block mb-1 font-medium">{{ t('confirm_password') }}</label>
+          <input v-model="form.password_confirmation" type="password" class="border rounded px-3 py-2 w-full" />
+        </div>
+
+        <!-- Tenant（SuperAdminのみ） -->
+        <div v-if="isSuperAdmin">
+          <label class="block mb-1 font-medium">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null" disabled>{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
             </option>
           </select>
-          <div v-if="errors.role" class="text-red-600 text-sm">{{ errors.role }}</div>
+          <div v-if="errors.tenant_id" class="text-red-500 text-sm">{{ errors.tenant_id }}</div>
         </div>
 
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
-          {{ t('update') }}
-        </button>
+        <!-- Role選択 -->
+        <div>
+          <label class="block mb-1 font-medium">{{ t('role') }}</label>
+          <select v-model="form.role_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null" disabled>{{ t('select_role') }}</option>
+            <option v-for="role in roles" :key="role.id" :value="role.id">
+              {{ role.name }} - {{ role.tenant_name }}
+            </option>
+          </select>
+          <div v-if="errors.role_id" class="text-red-500 text-sm">{{ errors.role_id }}</div>
+        </div>
+
+        <!-- 保存ボタン -->
+        <div class="flex justify-end">
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            {{ user ? t('update') : t('create') }}
+          </button>
+        </div>
       </form>
     </div>
   </AppLayout>
@@ -47,31 +69,48 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { reactive } from 'vue'
 import { useForm } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
+// Super Admin 判定
+const isSuperAdmin = computed(() =>
+  Array.isArray(props.user?.roles) && props.user.roles.some(r => r.name.toLowerCase() === 'super admin')
+)
+
 const props = defineProps({
-  user: Object,
-  roles: Array,
-  currentRole: String,
+  user: { type: Object, default: () => ({}) },
+  roles: { type: Array, default: () => [] },
+  tenants: { type: Array, default: () => [] },
+  selected_role: { type: Number, default: null }
 })
 
 const form = useForm({
-  name: props.user.name,
-  email: props.user.email,
+  name: props.user?.name || '',
+  email: props.user?.email || '',
   password: '',
-  role: props.currentRole ?? null, // ✅ 現在のロール or null
+  password_confirmation: '',
+  role_id: props.selected_role || null,
+  tenant_id: props.user?.tenant_id || null
 })
 
-const errors = reactive({})
+const errors = form.errors
 
 const submit = () => {
-  form.put(route('users.update', props.user.id), {
-    onError: (e) => Object.assign(errors, e)
-  })
+  console.log('送信データ:', form);
+  if (props.user?.id) {
+    form.put(route('users.update', props.user.id), {
+      onError: (e) => console.log(e)
+    })
+  } else {
+    form.post(route('users.store'), {
+      onError: (e) => console.log(e)
+    })
+  }
 }
+
 </script>
+
 

@@ -68,6 +68,7 @@
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
+            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('dish_name')">{{ t('dish_name') }}</th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_date')">{{ t('serving_date') }}</th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_time')">{{ t('serving_time') }}</th>
@@ -79,6 +80,9 @@
         <tbody>
           <tr v-for="menu in menus.data" :key="menu.id" class="odd:bg-white even:bg-gray-100">
             <td class="px-3 py-2"><input type="checkbox" :value="menu.id" v-model="selectedIds" /></td>
+            <td v-if="isSuperAdmin">
+              {{ tenants.find(t => t.id === menu.tenant_id)?.name || '-' }}
+            </td>            
             <td class="px-3 py-2">{{ menu.dish_name }}</td>
             <td class="px-3 py-2">{{ menu.serving_date ? dayjs(menu.serving_date).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
             <td class="px-3 py-2">{{ menu.serving_time }}</td>
@@ -117,10 +121,16 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicate
 
 const props = defineProps({
   menus: Object,
+  tenants: Array,
+  user: Object,
   filters: Object
 })
 
 const { t } = useI18n()
+
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 
 // 検索フォーム
 const openDrawer = ref(false)

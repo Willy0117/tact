@@ -51,6 +51,17 @@
           <p v-if="errors.serial_number" class="text-red-500 text-sm mt-1">{{ errors.serial_number }}</p>
         </div>
 
+        <!-- Tenant 選択 (Super Admin のみ) -->
+        <div v-if="isSuperAdmin" class="mt-4">
+          <label class="block mb-1">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
+            </option>
+          </select>
+        </div>
+
         <!-- Disabled -->
         <div class="flex items-center">
           <input type="checkbox" v-model="form.disabled" id="disabled" class="mr-2" />
@@ -91,16 +102,22 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router } from '@inertiajs/vue3'
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const props = defineProps({
   sensor: Object,
+  tenants: Array,      // Super Admin のみ
+  user: Object,
   filters: Object
 })
 
 const { t } = useI18n()
+// Super Admin 判定
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 
 const form = reactive({
   code: props.sensor.code,
@@ -108,8 +125,14 @@ const form = reactive({
   model: props.sensor.model,
   serial_number: props.sensor.serial_number,
   disabled: props.sensor.disabled,
-  display_order: props.sensor.display_order
+  display_order: props.sensor.display_order,
+  tenant_id: props.sensor
+  ? props.sensor.tenant_id
+  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
 })
+
+console.log(form);
+console.log('is=',isSuperAdmin.value);
 
 const errors = reactive({
   code: '',

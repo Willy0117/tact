@@ -16,6 +16,12 @@ class Sensor extends Model
         'serial_number',
         'disabled',
         'display_order',
+        'tenant_id',
     ];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 }
 

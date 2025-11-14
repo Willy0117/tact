@@ -87,6 +87,7 @@
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
+            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
               <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
@@ -115,6 +116,9 @@
             <td class="px-3 py-2">
               <input type="checkbox" :value="device.id" v-model="selectedIds" />
             </td>
+            <td v-if="isSuperAdmin">
+              {{ tenants.find(t => t.id === device.tenant_id)?.name || '-' }}
+            </td>            
             <td class="px-3 py-2">{{ device.code }}</td>
             <td class="px-3 py-2">{{ device.name }}</td>
             <td class="px-3 py-2">{{ device.process }}</td>
@@ -154,6 +158,8 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicate
 
 const props = defineProps({
   devices: Object,
+  user: Object,
+  tenants: Array,
   filters: {
     type: Object,
     default: () => ({
@@ -164,6 +170,10 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 
 // 検索フォーム・per_page・sort・directionを reactive で管理
 const openDrawer = ref(false)

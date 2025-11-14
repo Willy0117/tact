@@ -40,6 +40,16 @@
           placeholder="Measurable"
           class="border rounded px-3 py-2 w-full"
         />
+       <!-- Tenant 選択 (Super Admin のみ) -->
+        <div v-if="isSuperAdmin" class="mt-4">
+          <label class="block mb-1">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
+            </option>
+          </select>
+        </div>
 
         <div>
           <label class="block">{{ t('disabled') }}</label>
@@ -71,15 +81,21 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router} from '@inertiajs/vue3'
-import { reactive, ref, watch, onMounted } from 'vue'
+import { reactive, ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const { t } = useI18n()
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
+
 // Props に mode と device_id を追加
 const props = defineProps({
   filters: Object,
-  device: Object, // 追加
+  tenants: Array,      // Super Admin のみ
+  device: Object,
+  user: Object, // 追加
   mode: { type: String, default: '' }
 })
 
@@ -89,7 +105,10 @@ const form = reactive({
   model: props.device?.process ?? '',
   serial_number: props.device?.measurement ?? '',
   disabled: props.device?.disabled ?? 1,
-  display_order: props.device?.display_order ?? 1
+  display_order: props.device?.display_order ?? 1,
+  tenant_id: props.device
+  ? props.device.tenant_id
+  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
 })
 
 // リアルタイム重複チェック
@@ -116,7 +135,7 @@ onMounted(() => {
       form.measurement = device.measurement
       form.disabled = device.disabled
       form.display_order = device.display_order
-
+      form.device_id = device.device_id
       checkCode(device.code)
     }
   }

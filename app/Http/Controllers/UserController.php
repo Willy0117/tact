@@ -7,15 +7,23 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Tenant;
 
 class UserController extends Controller
 {
     /**
      * ユーザー一覧
      */
- public function index(Request $request)
+    public function index(Request $request)
     {
-        $query = User::with('roles'); // ← roles を eager load
+        $query = User::with('roles');
+
+        // テナント絞り込み（Super Admin は全件表示）
+        if (! $request->user()->hasRole('Super Admin')) {
+            $query->where('tenant_id', $request->user()->tenant_id);
+        }
 
         // 検索条件: 名前、メール、Role名
         if ($name = $request->input('name')) {
@@ -25,7 +33,6 @@ class UserController extends Controller
             $query->where('email', 'like', "%{$email}%");
         }
         if ($role = $request->input('role')) {
-            // ロール名で検索（1ユーザー1ロール前提）
             $query->whereHas('roles', function($q) use ($role) {
                 $q->where('name', 'like', "%{$role}%");
             });
@@ -59,78 +66,130 @@ class UserController extends Controller
     /**
      * ユーザー作成画面
      */
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Users/Create');
+        $currentUser = $request->user();
+
+        $roles = $currentUser->hasRole('Super Admin')
+            ? Role::all()
+            : Role::where('tenant_id', $currentUser->tenant_id)->get();
+
+        // tenant 名をマッピング
+        $tenants = Tenant::all()->keyBy('id');
+        $roles = $roles->map(function($role) use ($tenants) {
+            $role->tenant_name = $role->tenant_id ? ($tenants[$role->tenant_id]->name ?? '(Global)') : '(Global)';
+            return $role;
+        });
+
+        $availableTenants = $currentUser->hasRole('Super Admin') ? Tenant::all() : [];
+
+        return Inertia::render('Users/Edit', [
+            'user' => null,
+            'roles' => $roles,
+            'selected_role' => null,
+            'tenants' => $availableTenants,
+        ]);
     }
 
     /**
-     * ユーザー登録
+     * 保存処理
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => ['required','string','max:255'],
-            'email' => ['required','email','max:255','unique:users,email'],
-            'password' => ['required','string','min:8'],
+        $currentUser = $request->user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|confirmed|min:8',
+            'role_id' => 'required|exists:roles,id',
+            'tenant_id' => 'nullable|exists:tenants,id',
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        // Super Admin は tenant_id を選択可能、tenant_admin は自分の tenant_id に固定
+        $tenantId = $currentUser->hasRole('Super Admin')
+            ? $request->tenant_id
+            : $currentUser->tenant_id;
 
-        User::create($validated);
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'tenant_id' => $tenantId,
+            'password' => Hash::make($request->password),
+        ]);
 
-        return redirect()->route('users.index')
-            ->with('success', __('User has been created.'));
+        $role = Role::findOrFail($request->role_id);
+
+        // ユーザーに role を付与（assignRole 内で permissions も自動付与）
+        $user->assignRole($role);
+
+        return redirect()->route('users.index')->with('success', __('User created successfully.'));
     }
 
+
     /**
-     * ユーザー編集画面
+     * 編集画面
      */
     public function edit(User $user)
     {
-        // 該当ユーザーの tenant_id に紐づくロールのみ取得
-        $roles = Role::where('tenant_id', $user->tenant_id)->get(['id', 'name']);
+        $currentUser = auth()->user();
+
+        $roles = $currentUser->hasRole('Super Admin')
+            ? Role::all()
+            : Role::where('tenant_id', $currentUser->tenant_id)->get();
+
+        $tenants = Tenant::all()->keyBy('id');
+        $roles = $roles->map(function($role) use ($tenants) {
+            $role->tenant_name = $role->tenant_id ? ($tenants[$role->tenant_id]->name ?? '(Global)') : '(Global)';
+            return $role;
+        });
+
+        $availableTenants = $currentUser->hasRole('Super Admin') ? Tenant::all() : [];
 
         return Inertia::render('Users/Edit', [
             'user' => $user,
             'roles' => $roles,
-            'currentRole' => $user->roles->first()?->name, // ユーザーの現在のロール（1つだけ）
+            'selected_role' => $user->roles->first()?->id,
+            'tenants' => $availableTenants,
         ]);
     }
 
     /**
-     * ユーザー更新
+     * 更新処理
      */
     public function update(Request $request, User $user)
     {
+        $currentUser = $request->user();
+
         $validated = $request->validate([
-            'name' => ['required','string','max:255'],
-            'email' => ['required','email','max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['nullable','string','min:8'],
-            'role' => ['nullable','string'], // 追加
+            'name' => 'required|string|max:255',
+            'email' => "required|string|email|max:255|unique:users,email,{$user->id}",
+            'password' => 'nullable|string|confirmed|min:8',
+            'role_id' => 'required|exists:roles,id',
+            'tenant_id' => 'nullable|exists:tenants,id',
         ]);
 
-        if (!empty($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        } else {
-            unset($validated['password']);
+        $tenantId = $currentUser->hasRole('Super Admin')
+            ? $validated['tenant_id']
+            : $currentUser->tenant_id;
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->tenant_id = $tenantId;
+
+        // パスワードが入力されていれば更新
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
         }
 
-        // ✅ ユーザーデータ更新
-        $user->update($validated);
-
-        // ✅ ロール更新処理
-        if ($request->filled('role')) {
-            // role name を使ってロール付与
-            $user->syncRoles([$request->role]);
-        } else {
-            // ロールが選択されていない場合 → 全ロール削除
-            $user->syncRoles([]);
+        $user->save();        
+        if ($request->filled('role_id')) {
+            $role = Role::findOrFail($request->role_id);
+            $user->syncRoles([$role]);
         }
 
-        return redirect()->route('users.index')
-            ->with('success', __('User has been updated.'));
+        return redirect()->route('users.index')->with('success', __('User updated successfully.'));
     }
+
     /**
      * ユーザー削除
      */

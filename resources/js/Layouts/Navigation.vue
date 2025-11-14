@@ -67,28 +67,46 @@ const user = usePage().props.auth.user || null
 
 console.log(user)
 
-// can(permission) : Vue 側で簡易チェック
 const can = (permissionName) => {
   if (!user) return false
-  // user.permissions が配列で渡されている前提（HandleInertiaRequests で load('permissions') している）
-  if (Array.isArray(user.permissions)) {
-    return user.permissions.some(p => p.name === permissionName)
+
+  // permissions を安全に配列化
+  const perms = Array.isArray(user.permissions)
+    ? user.permissions
+    : (user.permissions?.data ?? [])
+  if (perms.length > 0) {
+    return perms.some(p => p.name === permissionName)
   }
-  // もし permissions がコレクションオブジェクトとして渡っている場合の安全策
-  if (user.permissions && typeof user.permissions.some === 'function') {
-    try { return user.permissions.some(p => p.name === permissionName) } catch { /* ignore */ }
+
+  // role を配列化
+  const roles = Array.isArray(user.roles) ? user.roles : (user.roles?.data ?? [])
+
+  if (roles.length > 0) {
+    // Super Admin は全権限
+    if (roles.some(r => ['super admin', 'super-admin'].includes(r.name.toLowerCase()))) {
+      return true
+    }
+
+    // Tenant Admin は一部権限のみ
+    if (roles.some(r => r.name.toLowerCase().startsWith('tenant_admin'))) {
+      return ['manage roles', 'manage permissions'].includes(permissionName)
+    }
   }
-  // fallback: role ベースチェック
-  if (Array.isArray(user.roles)) {
-    // 例えば Super Admin ロールがあれば全部許可する設計ならここでチェック
-    return user.roles.some(r => r.name === 'Super Admin' || r.name === 'super-admin')
-  }
+
   return false
 }
 
 // showAccessControl : セクション丸ごと表示判定
 const showAccessControl = computed(() => {
-  return can('manage tenants') || can('manage roles') || can('manage permissions')
+  if (!user) return false
+
+  // Super Admin は全て表示
+  if (user.roles?.some(r => r.name.toLowerCase() === 'super admin')) {
+    return true
+  }
+
+  // テナント管理者は role / permission のみ表示
+  return can('manage roles') || can('manage permissions')
 })
 </script>
 
@@ -180,53 +198,53 @@ const showAccessControl = computed(() => {
               </button -->
             </div>
           </transition>
-<!-- Access Control -->
-<template v-if="showAccessControl">
-  <button @click="toggleSubMenu('access')"
-          class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
-    <div class="flex items-center">
-      <ShieldCheckIcon class="w-5 h-5"/>
-      <span v-if="!collapsed" class="ml-2">{{ t('access_control') }}</span>
-    </div>
-    <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='access'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
-  </button>
+          <!-- Access Control -->
+          <template v-if="showAccessControl">
+            <button @click="toggleSubMenu('access')"
+                    class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+              <div class="flex items-center">
+                <ShieldCheckIcon class="w-5 h-5"/>
+                <span v-if="!collapsed" class="ml-2">{{ t('access_control') }}</span>
+              </div>
+              <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='access'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
 
-  <transition name="slide-fade">
-    <div v-show="openSubMenu==='access' && !collapsed" class="pl-6 mt-1 space-y-1">
-      <Link
-        v-if="can('manage tenants')"
-        :href="route('tenants.index')"
-        class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-        :class="isActive('tenants.index') ? 'bg-gray-200 font-semibold' : ''"
-      >
-        <BuildingOfficeIcon class="w-4 h-4 mr-1"/>
-        {{ t('tenants') }}
-      </Link>
+            <transition name="slide-fade">
+              <div v-show="openSubMenu==='access' && !collapsed" class="pl-6 mt-1 space-y-1">
+                <Link
+                  v-if="can('manage tenants')"
+                  :href="route('tenants.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('tenants.index') ? 'bg-gray-200 font-semibold' : ''"
+                >
+                  <BuildingOfficeIcon class="w-4 h-4 mr-1"/>
+                  {{ t('tenants') }}
+                </Link>
 
-      <Link
-        v-if="can('manage roles')"
-        :href="route('roles.index')"
-        class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-        :class="isActive('roles.index') ? 'bg-gray-200 font-semibold' : ''"
-      >
-        <UsersIcon class="w-4 h-4 mr-1"/>
-        {{ t('roles') }}
-      </Link>
+                <Link
+                  v-if="can('manage roles')"
+                  :href="route('roles.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('roles.index') ? 'bg-gray-200 font-semibold' : ''"
+                >
+                  <UsersIcon class="w-4 h-4 mr-1"/>
+                  {{ t('roles') }}
+                </Link>
 
-      <Link
-        v-if="can('manage permissions')"
-        :href="route('permissions.index')"
-        class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-        :class="isActive('permissions.index') ? 'bg-gray-200 font-semibold' : ''"
-      >
-        <TicketIcon class="w-4 h-4 mr-1"/>
-        {{ t('permissions') }}
-      </Link>
-    </div>
-  </transition>
-</template>
+                <Link
+                  v-if="can('manage permissions')"
+                  :href="route('permissions.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('permissions.index') ? 'bg-gray-200 font-semibold' : ''"
+                >
+                  <TicketIcon class="w-4 h-4 mr-1"/>
+                  {{ t('permissions') }}
+                </Link>
+              </div>
+            </transition>
+          </template>
           <!-- ここからマスター系メニュー -->
 
           <button @click="toggleSubMenu('masters')"
@@ -264,7 +282,30 @@ const showAccessControl = computed(() => {
             </div>
           </transition>          
         </div>
+        <!-- ここからユーザーメニュー（マスターとは独立） -->
+        <div>
+          <button @click="toggleSubMenu('users')"
+                  class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+            <div class="flex items-center">
+              <UsersIcon class="w-5 h-5"/>
+              <span v-if="!collapsed" class="ml-2">{{ t('user') }}</span>
+            </div>
+            <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='users'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
+          <transition name="slide-fade">
+            <div v-show="openSubMenu==='users' && !collapsed" class="pl-6 mt-1 space-y-1">
+              <Link :href="route('users.index')"
+                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                    :class="isActive('users.index') ? 'bg-gray-200 font-semibold' : ''">
+                <UserIcon class="w-4 h-4 mr-1"/>
+                {{ t('user') }}
+              </Link>
+            </div>
+          </transition>
+        </div>
         <!-- Teams -->
         <div v-if="hasTeamFeatures" class="mt-4 border-t border-gray-200 pt-2 text-xs text-gray-400 px-2">Manage Team</div>
         <div v-if="hasTeamFeatures" class="mt-1 space-y-1">

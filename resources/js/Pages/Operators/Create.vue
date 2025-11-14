@@ -23,6 +23,17 @@
           <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
         </div>
 
+        <!-- Tenant 選択 (Super Admin のみ) -->
+        <div v-if="isSuperAdmin" class="mt-4">
+          <label class="block mb-1">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
+            </option>
+          </select>
+        </div>
+
         <div>
           <label class="block">{{ t('disabled') }}</label>
           <select v-model="form.disabled" class="border rounded px-3 py-2 w-full">
@@ -53,23 +64,32 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router} from '@inertiajs/vue3'
-import { reactive, ref, watch, onMounted } from 'vue'
+import { reactive, ref, watch, onMounted, computed} from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const { t } = useI18n()
+
 // Props に mode と operator_id を追加
 const props = defineProps({
   filters: Object,
+  tenants: Array,      // Super Admin のみ
   operator: Object, // 追加
+  user: Object,
   mode: { type: String, default: '' }
 })
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 
 const form = reactive({
   code: props.operator?.code ?? '',
   name: props.operator?.name ?? '',
   disabled: props.operator?.disabled ?? 1,
-  display_order: props.operator?.display_order ?? 1
+  display_order: props.operator?.display_order ?? 1,
+  tenant_id: props.permission
+  ? props.operator.tenant_id
+  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
 })
 
 // リアルタイム重複チェック

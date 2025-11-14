@@ -16,5 +16,12 @@ class Device extends Model
         'measurement',
         'disabled',
         'display_order',
+        'tenant_id',
     ];
+    
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
 }

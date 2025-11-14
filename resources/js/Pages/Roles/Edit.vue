@@ -5,103 +5,99 @@
     </template>
 
     <div class="p-6">
-      <div class="space-y-4">
-        <form @submit.prevent="submitForm">
-          <!-- Role Name -->
-          <div>
-            <label class="block mb-1">{{ t('name') }}</label>
-            <input
-              v-model="form.name"
-              type="text"
-              placeholder="Role Name"
-              class="border rounded px-3 py-2 w-full"
-            />
-            <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
-          </div>
+      <form @submit.prevent="submitForm" class="space-y-6">
+        <!-- Role Name -->
+        <div>
+          <label class="block mb-1 font-medium">{{ t('role_name') }}</label>
+          <input
+            v-model="form.name"
+            type="text"
+            class="border rounded px-3 py-2 w-full"
+            placeholder="Role Name"
+          />
+          <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
+        </div>
 
-          <!-- Permissions -->
-          <div class="mt-4">
-            <label class="block mb-1">{{ t('permissions') }}</label>
-            <div class="flex flex-wrap gap-2">
-              <div
-                v-for="perm in permissions"
-                :key="perm.id"
-                class="flex items-center space-x-1"
-              >
+        <!-- Permissions MultiSelect -->
+        <div>
+          <label class="block mb-1 font-medium">{{ t('permissions') }}</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-y-auto border rounded p-2">
+            <div v-for="permission in permissions" :key="permission.id" class="mb-2">
+              <label :for="'perm-' + permission.id" class="inline-flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  :value="perm.id"
+                  :id="'perm-' + permission.id"
+                  :value="permission.id"
                   v-model="form.permissions"
-                  :id="'perm_' + perm.id"
+                  class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
                 />
-                <label :for="'perm_' + perm.id">{{ perm.name }}</label>
-              </div>
+                <span class="text-gray-700">
+                  {{ permission.name }} {{ permission.tenant_label }}
+                </span>
+              </label>
             </div>
-            <p v-if="errors.permissions" class="text-red-500 text-sm mt-1">{{ errors.permissions }}</p>
-          </div>
+         </div>
+          <p v-if="errors.permissions" class="text-red-500 text-sm mt-1">{{ errors.permissions }}</p>
+        </div>
 
-          <!-- Buttons -->
-          <div class="flex space-x-2 mt-6">
-            <button
-              type="submit"
-              class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              {{ role ? t('update') : t('create') }}
-            </button>
-            <button
-              @click="router.get(route('roles.index', filters), { preserveState: true })"
-              type="button"
-              class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-            >
-              {{ t('cancel') }}
-            </button>
-          </div>
-        </form>
-      </div>
+        <!-- Buttons -->
+        <div class="flex space-x-2 mt-4">
+          <button
+            type="submit"
+            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            {{ role ? t('update') : t('create') }}
+          </button>
+          <button
+            type="button"
+            @click="router.get(route('roles.index', filters), { preserveState: true })"
+            class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+          >
+            {{ t('cancel') }}
+          </button>
+        </div>
+      </form>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
+import { reactive, computed } from 'vue'
+import { router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { router } from '@inertiajs/vue3'
-import { reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+// Props
 const props = defineProps({
-  role: Object,          // null → 新規作成, オブジェクト → 編集
-  permissions: Array,    // 全権限リスト
-  filters: Object        // Index 画面の検索条件
+  role: Object,           // null = create, object = edit
+  permissions: Array,     // {id, name, tenant_id, tenant_name?}
+  filters: Object,        // Index画面検索条件
 })
 
+// i18n
 const { t } = useI18n()
 
+// 初期フォーム値
 const form = reactive({
   name: props.role?.name || '',
-  permissions: props.role?.permissions?.map(p => p.id) || []
+  permissions: props.role?.permissions?.map(p => p.id) || [],
 })
+
 // エラー管理
-const errors = reactive({
-  name: '',
-  permissions: ''
-})
+const errors = reactive({})
 
 // 送信処理
 const submitForm = () => {
-  if (props.role) {
-    // 編集
-    router.put(route('roles.update', props.role.id), form, {
-      preserveState: true,
-      onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('roles.index', props.filters))
-    })
-  } else {
-    // 新規作成
-    router.post(route('roles.store'), form, {
-      preserveState: true,
-      onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('roles.index', props.filters))
-    })
-  }
+  const method = props.role ? 'put' : 'post'
+  const url = props.role
+    ? route('roles.update', props.role.id)
+    : route('roles.store')
+
+  router[method](url, form, {
+    preserveState: true,
+    onError: err => Object.assign(errors, err),
+    onSuccess: () => router.get(route('roles.index', props.filters)),
+  })
 }
 </script>
+

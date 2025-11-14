@@ -52,56 +52,65 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string'],
+            'name' => ['required', 'string', 'max:255'],
             'contact_email' => ['nullable', 'email'],
             'contact_phone' => ['nullable', 'string'],
             'address' => ['nullable', 'string'],
         ]);
 
-        // 1️⃣ テナントを作成
+        // 1️⃣ テナント作成
         $tenant = Tenant::create($validated);
 
-        // 2️⃣ 新テナント用のロール作成（名前は自由）
-        $adminRole = Role::create([
+        // 2️⃣ ロール作成（各テナント専用）
+        $tenantAdmin = Role::create([
             'name' => 'tenant_admin_' . $tenant->id,
             'tenant_id' => $tenant->id,
             'guard_name' => 'web',
         ]);
 
-        $userRole = Role::create([
+        $tenantUser = Role::create([
             'name' => 'tenant_user_' . $tenant->id,
             'tenant_id' => $tenant->id,
             'guard_name' => 'web',
         ]);
 
-        // 3️⃣ 雛形（tenant_id IS NULL の permission）だけを複製して新テナント用に登録
-        DB::transaction(function () use ($tenant, $adminRole) {
-            $templatePermissions = Permission::whereNull('tenant_id')->get();
+        // 3️⃣ 権限構成（確定版）
+        $permissions = [
+            // 管理設定
+            'manage roles' => ['admin'],
+            'manage permissions' => ['admin'],
+            'manage users' => ['admin'],
 
-            foreach ($templatePermissions as $tpl) {
-                // 存在チェック（同名・同guard・同tenantが既にあればスキップ）
-                $exists = Permission::where('name', $tpl->name)
-                    ->where('guard_name', $tpl->guard_name)
-                    ->where('tenant_id', $tenant->id)
-                    ->first();
+            // マスター管理
+            'manage masters' => ['admin', 'user'],
 
-                if ($exists) {
-                    $newPerm = $exists;
-                } else {
-                    // 複製して tenant_id をセットして保存
-                    $newPerm = $tpl->replicate();
-                    $newPerm->tenant_id = $tenant->id;
-                    $newPerm->push(); // save()
-                }
+            // センサー記録系
+            'manage sensor' => ['admin', 'user'],
 
-                // adminRole にそのテナント用 permission を付与（モデルで渡すと確実）
-                $adminRole->givePermissionTo($newPerm);
+            // 献立管理
+            'manage menus' => ['admin', 'user'],
+        ];
+
+        // 4️⃣ Permission登録＆Role割当
+        foreach ($permissions as $permissionName => $roles) {
+            $permission = Permission::firstOrCreate([
+                'name' => $permissionName,
+                'tenant_id' => $tenant->id,
+                'guard_name' => 'web',
+            ]);
+
+            if (in_array('admin', $roles)) {
+                $tenantAdmin->givePermissionTo($permission);
             }
-        });
+            if (in_array('user', $roles)) {
+                $tenantUser->givePermissionTo($permission);
+            }
+        }
 
         return redirect()->route('tenants.index')
-            ->with('success', __('Tenant has been created and initialized with roles & permissions.'));
+            ->with('success', 'Tenant created successfully with roles & permissions.');
     }
+
 
 
     // Edit画面
@@ -115,46 +124,65 @@ class TenantController extends Controller
     public function update(Request $request, Tenant $tenant)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string'],
+            'name' => ['required', 'string', 'max:255'],
             'contact_email' => ['nullable', 'email'],
             'contact_phone' => ['nullable', 'string'],
             'address' => ['nullable', 'string'],
         ]);
 
+        // 1️⃣ Tenant情報更新
         $tenant->update($validated);
 
-        // 既存ロール取得または作成
-        $adminRole = Role::firstOrCreate(
-            ['name' => 'tenant_admin_' . $tenant->id, 'tenant_id' => $tenant->id, 'guard_name' => 'web']
-        );
-        $userRole = Role::firstOrCreate(
-            ['name' => 'tenant_user_' . $tenant->id, 'tenant_id' => $tenant->id, 'guard_name' => 'web']
-        );
+        // 2️⃣ 既存ロール取得または作成
+        $tenantAdmin = Role::firstOrCreate([
+            'name' => 'tenant_admin_' . $tenant->id,
+            'tenant_id' => $tenant->id,
+            'guard_name' => 'web',
+        ]);
 
-        DB::transaction(function () use ($tenant, $adminRole) {
-            $templatePermissions = Permission::whereNull('tenant_id')->get();
+        $tenantUser = Role::firstOrCreate([
+            'name' => 'tenant_user_' . $tenant->id,
+            'tenant_id' => $tenant->id,
+            'guard_name' => 'web',
+        ]);
 
-            foreach ($templatePermissions as $tpl) {
-                $exists = Permission::where('name', $tpl->name)
-                    ->where('guard_name', $tpl->guard_name)
-                    ->where('tenant_id', $tenant->id)
-                    ->first();
+        // 3️⃣ 権限構成（storeと同じ）
+        $permissions = [
+            // 管理設定
+            'manage roles' => ['admin'],
+            'manage permissions' => ['admin'],
+            'manage users' => ['admin'],
 
-                if ($exists) {
-                    $newPerm = $exists;
-                } else {
-                    $newPerm = $tpl->replicate();
-                    $newPerm->tenant_id = $tenant->id;
-                    $newPerm->push();
-                }
+            // マスター管理
+            'manage masters' => ['admin', 'user'],
 
-                $adminRole->givePermissionTo($newPerm);
+            // センサー記録系
+            'manage sensor' => ['admin', 'user'],
+
+            // 献立管理
+            'manage menus' => ['admin', 'user'],
+        ];
+
+        // 4️⃣ Permission登録＆Role割当
+        foreach ($permissions as $permissionName => $roles) {
+            $permission = Permission::firstOrCreate([
+                'name' => $permissionName,
+                'tenant_id' => $tenant->id,
+                'guard_name' => 'web',
+            ]);
+
+            if (in_array('admin', $roles)) {
+                $tenantAdmin->givePermissionTo($permission);
             }
-        });
+            if (in_array('user', $roles)) {
+                $tenantUser->givePermissionTo($permission);
+            }
+        }
 
         return redirect()->route('tenants.index')
-            ->with('success', __('Tenant has been updated and permissions synchronized.'));
+            ->with('success', 'Tenant updated successfully with roles & permissions.');
     }
+
 
 
 

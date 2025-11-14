@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use App\Models\Tenant;
 
 class RoleController extends Controller
 {
@@ -89,9 +90,19 @@ class RoleController extends Controller
             abort(403);
         }
 
-        $permissions = $user->hasRole('Super Admin')
+        $permissions = ($user->hasRole('Super Admin')
             ? Permission::all()
-            : Permission::where('tenant_id', $user->tenant_id)->orWhereNull('tenant_id')->get();
+            : Permission::where('tenant_id', $user->tenant_id)
+                ->orWhereNull('tenant_id')->get()
+        )->map(function ($perm) {
+            $tenantName = $perm->tenant_id ? Tenant::find($perm->tenant_id)?->name : null;
+            return [
+                'id' => $perm->id,
+                'name' => $perm->name,
+                'tenant_id' => $perm->tenant_id,
+                'tenant_label' => $tenantName ? '(' . $tenantName . ')' : '(Global)',
+            ];
+        });
 
         $role->load('permissions');
 
@@ -106,20 +117,32 @@ class RoleController extends Controller
     {
         $user = Auth::user();
 
+        // Tenant Admin は自テナント Role のみ編集可能
         if (! $user->hasRole('Super Admin') && $role->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
+        // バリデーション
         $request->validate([
             'name' => 'required|string|max:255|unique:roles,name,' . $role->id . ',id,tenant_id,' . ($role->tenant_id ?? 'NULL'),
             'permissions' => 'array',
         ]);
 
+        // Role 名更新
         $role->update([
             'name' => $request->name,
         ]);
 
-        $role->syncPermissions($request->permissions ?? []);
+        // Tenant Admin は自テナント Permission のみ同期
+        $permissions = $request->permissions ?? [];
+        if (! $user->hasRole('Super Admin')) {
+            $permissions = Permission::whereIn('id', $permissions)
+                                    ->where('tenant_id', $user->tenant_id)
+                                    ->pluck('id')
+                                    ->toArray();
+        }
+
+        $role->syncPermissions($permissions);
 
         return redirect()->route('roles.index')->with('success', __('Role updated successfully.'));
     }

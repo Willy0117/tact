@@ -71,6 +71,17 @@
           <div v-if="errors.materials" class="text-red-500 text-sm">{{ errors.materials }}</div>
         </div>
 
+        <!-- Tenant 選択 (Super Admin のみ) -->
+        <div v-if="isSuperAdmin" class="mt-4">
+          <label class="block mb-1">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
+            </option>
+          </select>
+        </div>
+
         <!-- ボタン -->
         <div class="flex space-x-2">
           <button @click="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
@@ -90,7 +101,7 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { router } from '@inertiajs/vue3'
 
@@ -98,15 +109,24 @@ const { t } = useI18n()
 
 const props = defineProps({
   filters: Object,
+  tenants: Array,      // Super Admin のみ
+  user: Object,
   menu: Object // コピー用に渡される場合
 })
+
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 
 const form = reactive({
   dish_name: props.menu?.dish_name ?? '',
   serving_date: props.menu?.serving_date ?? '',
   serving_time: props.menu?.serving_time ?? '',
   cooking_date: props.menu?.cooking_date ?? '',
-  materials: props.menu?.materials ?? ''
+  materials: props.menu?.materials ?? '',
+  tenant_id: props.menu
+  ? props.menu.tenant_id
+  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
 })
 
 const errors = reactive({

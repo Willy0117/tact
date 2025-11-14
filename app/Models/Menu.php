@@ -16,6 +16,7 @@ class Menu extends Model
         'materials',     
         'process',
         'cooking_date',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -23,4 +24,10 @@ class Menu extends Model
         'cooking_date' => 'date',
         'serving_time' => 'string', // time型は string として扱う
     ];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
 }
