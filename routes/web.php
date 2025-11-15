@@ -42,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('operator/bulk-delete', [\App\Http\Controllers\OperatorController::class, 'bulkDelete'])->name('operators.bulkDelete');
     // Processes 
     Route::resource('processes', \App\Http\Controllers\ProcessController::class);
-    // Route::post('process/bulk-delete', [\App\Http\Controllers\ProcessController::class, 'bulkDelete'])->name('processes.bulkDelete');
+    Route::post('process/bulk-delete', [\App\Http\Controllers\ProcessController::class, 'bulkDelete'])->name('processes.bulkDelete');
 
     // Menus
     // Import画面表示

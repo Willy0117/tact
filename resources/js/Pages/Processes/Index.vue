@@ -58,7 +58,7 @@
           </select>
 
           <Link
-            :href="route('processs.create', persistQuery())"
+            :href="route('processes.create', persistQuery())"
             class="px-4 h-10 bg-green-500 text-white rounded hover:bg-green-600 flex items-center space-x-1"
           >
             <PlusIcon class="w-4 h-4"/>
@@ -84,23 +84,16 @@
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
-            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
-              {{ t('code') }}
-              <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
-            </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
               <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2">{{ t('created_at') }}</th>
-            <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
-            <th class="px-3 py-2 text-center">{{ t('display_order') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="process in processs.data" :key="process.id" class="odd:bg-white even:bg-gray-100">
+          <tr v-for="process in processes.data" :key="process.id" class="odd:bg-white even:bg-gray-100">
 
             <td class="px-3 py-2">
               <input type="checkbox" :value="process.id" v-model="selectedIds" />
@@ -113,7 +106,7 @@
               <button @click="copyprocess(process.id)" class="text-green-500 hover:text-green-700">
                 <DocumentDuplicateIcon class="w-4 h-4" />
               </button>
-              <Link :href="route('processs.edit', { process: process.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
+              <Link :href="route('processes.edit', { process: process.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
                 <PencilIcon class="w-4 h-4"/>
               </Link>
               <button @click="deleteprocess(process.id)" class="text-red-500 hover:text-red-700">
@@ -125,7 +118,7 @@
       </table>
 
       <!-- ページネーション -->
-      <Pagination :paginator="processs" :onPageChange="goPage" :startItem="startItem" :endItem="endItem"/>
+      <Pagination :paginator="processes" :onPageChange="goPage" :startItem="startItem" :endItem="endItem"/>
     </div>
   </AppLayout>
 </template>
@@ -140,7 +133,7 @@ import dayjs from 'dayjs'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicateIcon} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
-  processs: Object,
+  processes: Object,
   user: Object,   // ← これが必要  
   filters: {
     type: Object,
@@ -169,7 +162,7 @@ const form = reactive({
 const selectedIds = ref([])
 
 const toggleSelectAll = (checked) => {
-  selectedIds.value = checked ? props.processs.data.map(s => s.id) : []
+  selectedIds.value = checked ? props.processes.data.map(s => s.id) : []
 }
 
 const resetSelectedIds = () => {
@@ -178,11 +171,11 @@ const resetSelectedIds = () => {
 
 const selectAll = computed({
   get() {
-    return selectedIds.value.length === props.processs.data.length
+    return selectedIds.value.length === props.processes.data.length
   }
 })
 
-watch(() => props.processs.current_page, () => {
+watch(() => props.processes.current_page, () => {
   selectedIds.value = []
 })
 
@@ -193,11 +186,11 @@ const persistQuery = () => ({
   per_page: form.per_page,
   sort_by: form.sort,
   sort_dir: form.direction,
-  page: props.processs.current_page
+  page: props.processes.current_page
 })
 
 const submitSearch = () => {
-  router.get(route('processs.index'), { ...persistQuery(), page: 1 }, {
+  router.get(route('processes.index'), { ...persistQuery(), page: 1 }, {
     preserveState: true,
     replace: true,
     onSuccess: () => resetSelectedIds()
@@ -206,7 +199,7 @@ const submitSearch = () => {
 
 // ページ番号クリック
 const goPage = (page) => {
-  router.get(route('processs.index'), { ...persistQuery(), page }, {
+  router.get(route('processes.index'), { ...persistQuery(), page }, {
     preserveState: true,
     replace: true,
     onSuccess: () => resetSelectedIds()
@@ -223,10 +216,10 @@ const sortBy = (field) => {
 // 行単位削除
 const deleteprocess = (process_id) => {
   if (!confirm(t('confirm_delete'))) return
-  router.delete(route('processs.destroy', process_id), {
+  router.delete(route('processes.destroy', process_id), {
     preserveState: true,
     onSuccess: () => {
-      router.get(route('processs.index'), { ...persistQuery(), page: props.processs.current_page }, { preserveState: true })
+      router.get(route('processes.index'), { ...persistQuery(), page: props.processes.current_page }, { preserveState: true })
     }
   })
 }
@@ -234,13 +227,13 @@ const deleteprocess = (process_id) => {
 const bulkDelete = () => {
   if (!confirm(t('confirm_delete_selected'))) return
   router.post(
-    route('processs.bulkDelete'),
+    route('processes.bulkDelete'),
     { ids: selectedIds.value },
     {
       preserveState: true,
       onSuccess: () => {
         // 削除後に検索条件・ページを保持して再取得
-        router.get(route('processs.index'), { ...persistQuery(), page: props.processs.current_page }, { preserveState: true })
+        router.get(route('processes.index'), { ...persistQuery(), page: props.processes.current_page }, { preserveState: true })
       }
     }
   )
@@ -248,11 +241,11 @@ const bulkDelete = () => {
 // コピー機能追加
 const copyprocess = (process_id) => {
   router.get(
-    route('processs.create', { ...persistQuery(), mode: 'copy', process_id })
+    route('processes.create', { ...persistQuery(), mode: 'copy', process_id })
   )
 }
 
 // 表示件数計算
-const startItem = computed(() => props.processs.per_page * (props.processs.current_page - 1) + 1)
-const endItem = computed(() => Math.min(props.processs.per_page * props.processs.current_page, props.processs.total))
+const startItem = computed(() => props.processes.per_page * (props.processes.current_page - 1) + 1)
+const endItem = computed(() => Math.min(props.processes.per_page * props.processes.current_page, props.processes.total))
 </script>

@@ -279,6 +279,12 @@ const showAccessControl = computed(() => {
                 <BeakerIcon class="w-4 h-4 mr-1"/>
                 {{ t('sensors') }}
               </Link>
+              <Link :href="route('processes.index')"
+                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                    :class="isActive('processes.index') ? 'bg-gray-200 font-semibold' : ''">
+                <BeakerIcon class="w-4 h-4 mr-1"/>
+                {{ t('processes') }}
+              </Link>
             </div>
           </transition>          
         </div>

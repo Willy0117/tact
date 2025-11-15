@@ -44,7 +44,7 @@
           </button>
           <button
             type="button"
-            @click="router.get(route('processs.index'), props.filters, { preserveState: true })"
+            @click="router.get(route('processes.index'), props.filters, { preserveState: true })"
             class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
             >
             {{ t('cancel') }}
@@ -80,12 +80,12 @@ const errors = reactive({
 })
 const submitForm = () => {
   router.put(
-    route('processs.update', props.process.id), // filters は付けない
+    route('processes.update', props.process.id), // filters は付けない
     form,
     {
       preserveState: true,
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('processs.index', props.filters)), // index の検索条件を保持して戻る
+      onSuccess: () => router.get(route('processes.index', props.filters)), // index の検索条件を保持して戻る
     }
   )
 }
