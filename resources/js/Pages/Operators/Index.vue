@@ -35,8 +35,6 @@
             <!-- 既存 form をそのまま利用 -->
             <input v-model="form.code" type="text" placeholder="Code" class="border rounded px-3 py-2 w-full" />
             <input v-model="form.name" type="text" placeholder="Name" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.process" type="text" placeholder="Process" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.measurement" type="text" placeholder="Measurement" class="border rounded px-3 py-2 w-full" />
 
             <div class="flex justify-end space-x-2 mt-4">
               <button @click="submitSearch(); openDrawer = false"
@@ -114,7 +112,7 @@
             <td class="px-3 py-2">{{ operator.code }}</td>
             <td class="px-3 py-2">{{ operator.name }}</td>
             <td class="px-3 py-2">{{ operator.updated_at ? dayjs(operator.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
-            <td class="px-3 py-2 text-center">{{ operator.disabled ? 'Yes' : 'No' }}</td>
+            <td class="px-3 py-2 text-center">{{ operator.disabled ? t('enable') : t('disable') }}</td>
             <td class="px-3 py-2 text-center">{{ operator.display_order }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copyoperator(operator.id)" class="text-green-500 hover:text-green-700">
@@ -173,7 +171,6 @@ const form = reactive({
   name: props.filters.name,
   per_page: props.filters.per_page,
   sort: props.filters.sort,
-  direction: props.filters.direction  
 })
 // 選択削除
 const selectedIds = ref([])

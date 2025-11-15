@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
 use App\Models\Tenant;
-use App\Models\User; // ← これを追加！
+use App\Models\User;
+use App\Models\Process;
 
 class DeviceController extends Controller
 {
@@ -28,11 +29,13 @@ class DeviceController extends Controller
         if ($name = $request->input('name')) {
             $query->where('name', 'like', "%{$name}%");
         }
-        if ($process = $request->input('process')) {
-            $query->where('process', 'like', "%{$process}%");
+        if ($processId = $request->input('process_id')) {
+            $query->where('process_id', $processId);
+            //$query->where('process', 'like', "%{$process}%");
         }
         if ($measurement = $request->input('measurement')) {
-            $query->where('measurement', 'like', "%{$measurement}%");
+            $query->where('measurement', $measurement);
+//          $query->where('measurement', 'like', "%{$measurement}%");
         }
 
         // ソート
@@ -44,12 +47,13 @@ class DeviceController extends Controller
         $perPage = intval($request->input('per_page', 10));
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+        $processes = Process::all(['id', 'name']);
 
-        $devices = Device::query()
+        $devices = Device::with('process')
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
-            ->when($request->process, fn($q,$v)=>$q->where('process','like',"%$v%"))
-            ->when($request->measurement, fn($q,$v)=>$q->where('measurement','like',"%$v%"))
+            ->when($request->process_id, fn($q,$v) => $q->where('process_id', $v))
+            ->when($request->measurement, fn($q,$v) => $q->where('measurement', $v))
             ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
             ->paginate($perPage)
             ->withQueryString(); // 検索条件をページリンクに保持
@@ -58,8 +62,9 @@ class DeviceController extends Controller
         return Inertia::render('Devices/Index', [
             'devices' => $devices,
             'tenants' => $tenants,
-            'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['code','name','process','measurement','per_page','sort_by','sort_dir']),
+            'user' => $user, 
+            'processes' => $processes,
+            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir']),
         ]);
     }
 
@@ -74,12 +79,15 @@ class DeviceController extends Controller
         if ($request->input('mode') === 'copy' && $device_id = $request->input('device_id')) {
             $device = Device::find($device_id);
         }
+        // process 選択肢を取得
+        $processes = Process::all(['id', 'name']);
 
         return Inertia::render('Devices/Create', [
-            'filters' => $request->only(['code','name','process','measurement','per_page','sort_by','sort_dir','page']),
+            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']),
             'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
             'device' => $device, // コピー元のデータを渡す
+            'processes' => $processes,
         ]);
     }
 
@@ -89,16 +97,15 @@ class DeviceController extends Controller
         
         $validated = $request->validate([
             'code' => ['required', 'string', Rule::unique('devices')],
-            'measurement' => ['required', 'string', Rule::unique('devices')],
             'name' => ['required', 'string'],
-            'process' => ['nullable', 'string'],
+            'process_id' => ['required', 'boolean'],
+            'measurement' => ['required', 'boolean'],
             'disabled' => ['required', 'boolean'],
             'display_order' => ['required', 'integer'],
             'tenant_id' => ['nullable', 'exists:tenants,id'],             
         ], [
             'code.required' => __('validation.required', ['attribute' => __('Code')]),
             'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
-            'measurement.required' => __('validation.required', ['attribute' => __('Measurement')]),
             'name.required' => __('validation.required', ['attribute' => __('Name')]),
             'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
@@ -109,7 +116,7 @@ class DeviceController extends Controller
 
         Device::create($validated);
 
-        return redirect()->route('devices.index', $request->only(['code','name','process','measurement','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('devices.index', $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']))
             ->with('success', __('device has been created.'));
     }
 
@@ -117,12 +124,15 @@ class DeviceController extends Controller
     {
         $user = $request->user();
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
+        // process 選択肢を取得
+        $processes = Process::all(['id', 'name']);
 
         return Inertia::render('Devices/Edit', [
             'device' => $device,
             'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['code','name','process','measurement','per_page','sort_by','sort_dir','page'])
+            'processes' => $processes,
+            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page'])
         ]);
     }
 
@@ -132,16 +142,15 @@ class DeviceController extends Controller
 
         $validated = $request->validate([
             'code' => ['required', 'string', Rule::unique('devices')->ignore($device->id)],
-            'measurement' => ['required', 'string'],
+            'measurement' => ['required', 'boolean'],
             'name' => ['required', 'string'],
-            'process' => ['nullable', 'string'],
+            'process_id' => ['required', 'boolean'],
             'disabled' => ['required', 'boolean'],
             'display_order' => ['required', 'integer'],
             'tenant_id' => ['nullable', 'exists:tenants,id'],             
         ], [
             'code.required' => __('validation.required', ['attribute' => __('Code')]),
             'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
-            'measurement.required' => __('validation.required', ['attribute' => __('Measurement')]),
             'name.required' => __('validation.required', ['attribute' => __('Name')]),
             'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
@@ -152,7 +161,7 @@ class DeviceController extends Controller
 
         $device->update($validated);
 
-        return redirect()->route('devices.index', $request->only(['code','name','process','measurement','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('devices.index', $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']))
             ->with('success', __('device has been updated.'));
     }
 

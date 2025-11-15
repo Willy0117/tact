@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <template #header>{{ t('sensor_list') }}</template>
+    <template #header>{{ t('process_list') }}</template>
     <div dir="rtl">
       <!-- 検索 トリガーボタン -->
         <div class="relative size-4 ...">
@@ -33,10 +33,7 @@
 
           <div class="p-4 space-y-3">
             <!-- 既存 form をそのまま利用 -->
-            <input v-model="form.code" type="text" placeholder="Code" class="border rounded px-3 py-2 w-full" />
             <input v-model="form.name" type="text" placeholder="Name" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.model" type="text" placeholder="Model" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.serial_number" type="text" placeholder="Serial Number" class="border rounded px-3 py-2 w-full" />
 
             <div class="flex justify-end space-x-2 mt-4">
               <button @click="submitSearch(); openDrawer = false"
@@ -61,11 +58,11 @@
           </select>
 
           <Link
-            :href="route('sensors.create', persistQuery())"
+            :href="route('processs.create', persistQuery())"
             class="px-4 h-10 bg-green-500 text-white rounded hover:bg-green-600 flex items-center space-x-1"
           >
             <PlusIcon class="w-4 h-4"/>
-            <span>{{ t('add_sensor') }}</span>
+            <span>{{ t('add_process') }}</span>
           </Link>
         </div>
 
@@ -96,44 +93,30 @@
               {{ t('name') }}
               <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('model')">
-              {{ t('model') }}
-              <span v-if="form.sort==='model'">{{ form.direction==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serial_number')">
-              {{ t('serial_number') }}
-              <span v-if="form.sort==='serial_number'">{{ form.direction==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2">{{ t('updated_at') }}</th>
+            <th class="px-3 py-2">{{ t('created_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
             <th class="px-3 py-2 text-center">{{ t('display_order') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="sensor in sensors.data" :key="sensor.id" class="odd:bg-white even:bg-gray-100">
+          <tr v-for="process in processs.data" :key="process.id" class="odd:bg-white even:bg-gray-100">
 
             <td class="px-3 py-2">
-              <input type="checkbox" :value="sensor.id" v-model="selectedIds" />
+              <input type="checkbox" :value="process.id" v-model="selectedIds" />
             </td>
-            <td v-if="isSuperAdmin">
-              {{ tenants.find(t => t.id === sensor.tenant_id)?.name || '-' }}
-            </td>            
-            <td class="px-3 py-2">{{ sensor.code }}</td>
-            <td class="px-3 py-2">{{ sensor.name }}</td>
-            <td class="px-3 py-2">{{ sensor.model }}</td>
-            <td class="px-3 py-2">{{ sensor.serial_number }}</td>
-            <td class="px-3 py-2">{{ sensor.updated_at ? dayjs(sensor.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
-            <td class="px-3 py-2 text-center">{{ sensor.disabled ? t('enable') : t('disable') }}</td>
-            <td class="px-3 py-2 text-center">{{ sensor.display_order }}</td>
+            <td class="px-3 py-2">{{ process.name }}</td>
+            <td class="px-3 py-2">{{ process.created_at ? dayjs(process.created_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
+            <td class="px-3 py-2 text-center">{{ process.disabled ? t('enable') : t('disable') }}</td>
+            <td class="px-3 py-2 text-center">{{ process.display_order }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
-              <button @click="copySensor(sensor.id)" class="text-green-500 hover:text-green-700">
+              <button @click="copyprocess(process.id)" class="text-green-500 hover:text-green-700">
                 <DocumentDuplicateIcon class="w-4 h-4" />
               </button>
-              <Link :href="route('sensors.edit', { sensor: sensor.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
+              <Link :href="route('processs.edit', { process: process.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
                 <PencilIcon class="w-4 h-4"/>
               </Link>
-              <button @click="deleteSensor(sensor.id)" class="text-red-500 hover:text-red-700">
+              <button @click="deleteprocess(process.id)" class="text-red-500 hover:text-red-700">
                 <TrashIcon class="w-4 h-4"/>
               </button>
             </td>
@@ -142,7 +125,7 @@
       </table>
 
       <!-- ページネーション -->
-      <Pagination :paginator="sensors" :onPageChange="goPage" :startItem="startItem" :endItem="endItem"/>
+      <Pagination :paginator="processs" :onPageChange="goPage" :startItem="startItem" :endItem="endItem"/>
     </div>
   </AppLayout>
 </template>
@@ -157,41 +140,36 @@ import dayjs from 'dayjs'
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicateIcon} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
-  tenants: Array, // Super Admin 用
+  processs: Object,
   user: Object,   // ← これが必要  
-  sensors: Object,
   filters: {
     type: Object,
     default: () => ({
-      code: '', name: '', model: '', serial_number: '',
+      name: '',
       per_page: 20, sort: 'id', direction: 'asc', page: 1
     })
   }
 })
 
 const { t } = useI18n()
+
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
-
 // 検索フォーム・per_page・sort・directionを reactive で管理
 const openDrawer = ref(false)
 
 // 複数検索用に reactive 拡張
 const form = reactive({
-  code: props.filters.code,
   name: props.filters.name,
-  model: props.filters.model,
-  serial_number: props.filters.serial_number,
   per_page: props.filters.per_page,
   sort: props.filters.sort,
-  direction: props.filters.direction
 })
 // 選択削除
 const selectedIds = ref([])
 
 const toggleSelectAll = (checked) => {
-  selectedIds.value = checked ? props.sensors.data.map(s => s.id) : []
+  selectedIds.value = checked ? props.processs.data.map(s => s.id) : []
 }
 
 const resetSelectedIds = () => {
@@ -200,29 +178,26 @@ const resetSelectedIds = () => {
 
 const selectAll = computed({
   get() {
-    return selectedIds.value.length === props.sensors.data.length
+    return selectedIds.value.length === props.processs.data.length
   }
 })
 
-watch(() => props.sensors.current_page, () => {
+watch(() => props.processs.current_page, () => {
   selectedIds.value = []
 })
 
 
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
-  code: form.code,
   name: form.name,
-  model: form.model,
-  serial_number: form.serial_number,
   per_page: form.per_page,
   sort_by: form.sort,
   sort_dir: form.direction,
-  page: props.sensors.current_page
+  page: props.processs.current_page
 })
 
 const submitSearch = () => {
-  router.get(route('sensors.index'), { ...persistQuery(), page: 1 }, {
+  router.get(route('processs.index'), { ...persistQuery(), page: 1 }, {
     preserveState: true,
     replace: true,
     onSuccess: () => resetSelectedIds()
@@ -231,7 +206,7 @@ const submitSearch = () => {
 
 // ページ番号クリック
 const goPage = (page) => {
-  router.get(route('sensors.index'), { ...persistQuery(), page }, {
+  router.get(route('processs.index'), { ...persistQuery(), page }, {
     preserveState: true,
     replace: true,
     onSuccess: () => resetSelectedIds()
@@ -246,12 +221,12 @@ const sortBy = (field) => {
 }
 
 // 行単位削除
-const deleteSensor = (sensor_id) => {
+const deleteprocess = (process_id) => {
   if (!confirm(t('confirm_delete'))) return
-  router.delete(route('sensors.destroy', sensor_id), {
+  router.delete(route('processs.destroy', process_id), {
     preserveState: true,
     onSuccess: () => {
-      router.get(route('sensors.index'), { ...persistQuery(), page: props.sensors.current_page }, { preserveState: true })
+      router.get(route('processs.index'), { ...persistQuery(), page: props.processs.current_page }, { preserveState: true })
     }
   })
 }
@@ -259,29 +234,25 @@ const deleteSensor = (sensor_id) => {
 const bulkDelete = () => {
   if (!confirm(t('confirm_delete_selected'))) return
   router.post(
-    route('sensors.bulkDelete'),
+    route('processs.bulkDelete'),
     { ids: selectedIds.value },
     {
       preserveState: true,
       onSuccess: () => {
         // 削除後に検索条件・ページを保持して再取得
-        router.get(route('sensors.index'), { ...persistQuery(), page: props.sensors.current_page }, { preserveState: true })
+        router.get(route('processs.index'), { ...persistQuery(), page: props.processs.current_page }, { preserveState: true })
       }
     }
   )
 }
 // コピー機能追加
-const copySensor = (sensor_id) => {
+const copyprocess = (process_id) => {
   router.get(
-    route('sensors.create', { ...persistQuery(), mode: 'copy', sensor_id })
+    route('processs.create', { ...persistQuery(), mode: 'copy', process_id })
   )
 }
 
 // 表示件数計算
-const startItem = computed(() => props.sensors.per_page * (props.sensors.current_page - 1) + 1)
-const endItem = computed(() => Math.min(props.sensors.per_page * props.sensors.current_page, props.sensors.total))
+const startItem = computed(() => props.processs.per_page * (props.processs.current_page - 1) + 1)
+const endItem = computed(() => Math.min(props.processs.per_page * props.processs.current_page, props.processs.total))
 </script>
-
-
-
-

@@ -46,7 +46,28 @@
           />
           <div v-if="errors.serial_number" class="text-red-500 text-sm">{{ errors.serial_number }}</div>
         </div>
+        <!-- Disabled -->
+        <div>
+          <label class="block">
+            <span class="block mb-1">{{ t('disabled') }}</span>
 
+            <div
+              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
+              @click="form.disabled = form.disabled ? 0 : 1"
+            >
+              <input
+                type="checkbox"
+                v-model="form.disabled"
+                :true-value="1"
+                :false-value="0"
+                class="w-4 h-4"
+              />
+              <span class="ml-2 text-gray-700">
+                {{ form.disabled ? t('enable') : t('disable') }}
+              </span>
+            </div>
+          </label>
+        </div>
         <!-- Tenant 選択 (Super Admin のみ) -->
         <div v-if="isSuperAdmin" class="mt-4">
           <label class="block mb-1">{{ t('tenant') }}</label>
@@ -59,14 +80,6 @@
         </div>
 
         <div>
-          <label class="block">{{ t('disabled') }}</label>
-          <select v-model="form.disabled" class="border rounded px-3 py-2 w-full">
-            <option :value="1">{{ t('enabled') }}</option>
-            <option :value="0">{{ t('disabled') }}</option>
-          </select>
-        </div>
-
-        <div>
           <label class="block">{{ t('display_order') }}</label>
           <input v-model.number="form.display_order" type="number" class="border rounded px-3 py-2 w-full" />
         </div>
@@ -74,6 +87,7 @@
         <div class="flex space-x-2">
           <button @click="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">{{ t('save') }}</button>
           <button
+            type="button"
             @click="router.get(route('sensors.index'), props.filters, { preserveState: true })"
             class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
           >

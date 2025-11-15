@@ -12,7 +12,7 @@ class Device extends Model
     protected $fillable = [
         'code',
         'name',
-        'process',
+        'process_id',
         'measurement',
         'disabled',
         'display_order',
@@ -23,5 +23,9 @@ class Device extends Model
     {
         return $this->belongsTo(Tenant::class);
     }
-
+    //processesから読み込み
+    public function process()
+    {
+        return $this->belongsTo(Process::class, 'process_id');
+    }
 }

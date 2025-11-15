@@ -24,7 +24,28 @@
           <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
           <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
         </div>
+        <!-- Disabled -->
+        <div>
+          <label class="block">
+            <span class="block mb-1">{{ t('disabled') }}</span>
 
+            <div
+              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
+              @click="form.disabled = form.disabled ? 0 : 1"
+            >
+              <input
+                type="checkbox"
+                v-model="form.disabled"
+                :true-value="1"
+                :false-value="0"
+                class="w-4 h-4"
+              />
+              <span class="ml-2 text-gray-700">
+                {{ form.disabled ? t('enable') : t('disable') }}
+              </span>
+            </div>
+          </label>
+        </div>
         <!-- Tenant 選択 (Super Admin のみ) -->
         <div v-if="isSuperAdmin" class="mt-4">
           <label class="block mb-1">{{ t('tenant') }}</label>
@@ -35,13 +56,6 @@
             </option>
           </select>
         </div>
-
-        <!-- Disabled -->
-        <div class="flex items-center">
-          <input type="checkbox" v-model="form.disabled" id="disabled" class="mr-2" />
-          <label for="disabled">{{ t('disabled') }}</label>
-        </div>
-
         <!-- Display Order -->
         <div class="mb-4">
           <label class="block mb-1">{{ t('display_order') }}</label>
@@ -61,6 +75,7 @@
             {{ t('update') }}
           </button>
           <button
+            type="button"
             @click="router.get(route('operators.index'), props.filters, { preserveState: true })"
             class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
             >
@@ -98,9 +113,8 @@ const form = reactive({
   name: props.operator.name,
   disabled: props.operator.disabled,
   display_order: props.operator.display_order,
-  tenant_id: props.permission
-  ? props.permission.tenant_id
-  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
+  tenant_id: props.operator?.tenant_id 
+  ?? (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
 })
 
 const errors = reactive({

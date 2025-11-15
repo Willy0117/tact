@@ -35,7 +35,12 @@
             <!-- 既存 form をそのまま利用 -->
             <input v-model="form.code" type="text" placeholder="Code" class="border rounded px-3 py-2 w-full" />
             <input v-model="form.name" type="text" placeholder="Name" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.process" type="text" placeholder="Process" class="border rounded px-3 py-2 w-full" />
+            <select v-model="form.process_id" class="border rounded px-3 py-2 w-full">
+              <option value="">{{ t('please_select') }}</option>
+              <option v-for="p in processes" :key="p.id" :value="p.id">
+                {{ p.name }}
+              </option>
+            </select>
             <input v-model="form.measurement" type="text" placeholder="Measurement" class="border rounded px-3 py-2 w-full" />
 
             <div class="flex justify-end space-x-2 mt-4">
@@ -96,9 +101,9 @@
               {{ t('name') }}
               <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('process')">
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('process_id')">
               {{ t('process') }}
-              <span v-if="form.sort==='process'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort==='process_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('measurement')">
               {{ t('measurement') }}
@@ -121,10 +126,10 @@
             </td>            
             <td class="px-3 py-2">{{ device.code }}</td>
             <td class="px-3 py-2">{{ device.name }}</td>
-            <td class="px-3 py-2">{{ device.process }}</td>
-            <td class="px-3 py-2">{{ device.measurement }}</td>
+            <td class="px-3 py-2">{{ device.process?.name ?? '' }}</td>
+            <td class="px-3 py-2">{{ device.measurement ? t('do') : t('dont') }}</td>
             <td class="px-3 py-2">{{ device.updated_at ? dayjs(device.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
-            <td class="px-3 py-2 text-center">{{ device.disabled ? 'Yes' : 'No' }}</td>
+            <td class="px-3 py-2 text-center">{{ device.disabled ? t('enable') : t('disable') }}</td>
             <td class="px-3 py-2 text-center">{{ device.display_order }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copydevice(device.id)" class="text-green-500 hover:text-green-700">
@@ -160,10 +165,11 @@ const props = defineProps({
   devices: Object,
   user: Object,
   tenants: Array,
+  processes: Array,
   filters: {
     type: Object,
     default: () => ({
-      code: '', name: '', process: '', measurement: '',
+      code: '', name: '', process_id: '', measurement: '',
       per_page: 20, sort: 'id', direction: 'asc', page: 1
     })
   }
@@ -182,7 +188,7 @@ const openDrawer = ref(false)
 const form = reactive({
   code: props.filters.code,
   name: props.filters.name,
-  process: props.filters.process,
+  process_id: props.filters.process_id,
   measurement: props.filters.measurement,
   per_page: props.filters.per_page,
   sort: props.filters.sort,
@@ -214,7 +220,7 @@ watch(() => props.devices.current_page, () => {
 const persistQuery = () => ({
   code: form.code,
   name: form.name,
-  process: form.process,
+  process_id: form.process_id,
   measurement: form.measurement,
   per_page: form.per_page,
   sort_by: form.sort,
@@ -223,6 +229,7 @@ const persistQuery = () => ({
 })
 
 const submitSearch = () => {
+  console.log(persistQuery())
   router.get(route('devices.index'), { ...persistQuery(), page: 1 }, {
     preserveState: true,
     replace: true,

@@ -26,31 +26,60 @@
         </div>
 
         <!-- process -->
-        <div>
-          <label class="block mb-1">{{ t('process') }}</label>
-          <input
-            v-model="form.process"
-            @input="form.process = toHalfWidth(form.process)"
-            type="text"
-            placeholder="Process"
-            class="border rounded px-3 py-2 w-full"
-          />
-          <p v-if="errors.process" class="text-red-500 text-sm mt-1">{{ errors.process }}</p>
+       <div>
+          <label class="block">{{ t('process') }}</label>
+          <select v-model="form.process_id" class="mt-1 block w-full">
+            <option value="">{{ t('please_select') }}</option>
+            <option v-for="p in processes" :key="p.id" :value="p.id">
+              {{ p.name }}
+            </option>
+          </select>
         </div>
 
-        <!-- Serial Number -->
         <div>
-          <label class="block mb-1">{{ t('measurement') }}</label>
-          <input
-            v-model="form.measurement"
-            @input="form.measurement = toHalfWidth(form.measurement)"
-            type="text"
-            placeholder="Serial Number"
-            class="border rounded px-3 py-2 w-full"
-          />
-          <p v-if="errors.measurement" class="text-red-500 text-sm mt-1">{{ errors.measurement }}</p>
+          <label class="block">
+            <span class="block mb-1">{{ t('measurement') }}</span>
+
+            <div
+              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
+              @click="form.measurement = form.measurement ? 0 : 1"
+            >
+              <input
+                type="checkbox"
+                v-model="form.measurement"
+                :true-value="1"
+                :false-value="0"
+                class="w-4 h-4"
+              />
+              <span class="ml-2 text-gray-700">
+                {{ form.measurement ? t('yes') : t('no') }}
+              </span>
+            </div>
+          </label>
         </div>
-       <!-- Tenant 選択 (Super Admin のみ) -->
+
+        <div>
+          <label class="block">
+            <span class="block mb-1">{{ t('disabled') }}</span>
+
+            <div
+              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
+              @click="form.disabled = form.disabled ? 0 : 1"
+            >
+              <input
+                type="checkbox"
+                v-model="form.disabled"
+                :true-value="1"
+                :false-value="0"
+                class="w-4 h-4"
+              />
+              <span class="ml-2 text-gray-700">
+                {{ form.disabled ? t('enable') : t('disable') }}
+              </span>
+            </div>
+          </label>
+        </div>
+        <!-- Tenant 選択 (Super Admin のみ) -->
         <div v-if="isSuperAdmin" class="mt-4">
           <label class="block mb-1">{{ t('tenant') }}</label>
           <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
@@ -59,12 +88,6 @@
               {{ tenant.name }}
             </option>
           </select>
-        </div>
-
-        <!-- Disabled -->
-        <div class="flex items-center">
-          <input type="checkbox" v-model="form.disabled" id="disabled" class="mr-2" />
-          <label for="disabled">{{ t('disabled') }}</label>
         </div>
 
         <!-- Display Order -->
@@ -86,6 +109,7 @@
             {{ t('update') }}
           </button>
           <button
+            type="button"
             @click="router.get(route('devices.index'), props.filters, { preserveState: true })"
             class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
             >
@@ -109,6 +133,7 @@ const props = defineProps({
   device: Object,
   tenants: Array,      // Super Admin のみ
   user: Object,
+  processes: Array,
   filters: Object
 })
 
@@ -117,17 +142,17 @@ const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
 
+const processes = props.processes
 
 const form = reactive({
   code: props.device.code,
   name: props.device.name,
-  process: props.device.process,
-  measurement: props.device.measurement,
-  disabled: props.device.disabled,
+  process_id: props.device.process_id,
+  measurement: props.device?.measurement ?? 0, // 0/1
+  disabled: props.device?.disabled ?? 1,       // 0/1
   display_order: props.device.display_order,
-  tenant_id: props.permission
-  ? props.permission.tenant_id
-  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
+  tenant_id: props.device?.tenant_id 
+  ?? (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
 })
 
 const errors = reactive({

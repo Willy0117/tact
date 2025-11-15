@@ -16,8 +16,10 @@ class SensorResource extends JsonResource
             'model' => $this->model,
             'disabled' => $this->disabled,
             'display_order' => $this->display_order,
+            /* 2025.11.14 不要データ削除
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            */
         ];
     }
 }

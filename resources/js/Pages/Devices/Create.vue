@@ -22,24 +22,60 @@
           <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
           <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
         </div>
+       <div>
+          <label class="block">{{ t('process') }}</label>
+          <select v-model="form.process_id" class="mt-1 block w-full">
+            <option value="">{{ t('please_select') }}</option>
+            <option v-for="p in processes" :key="p.id" :value="p.id">
+              {{ p.name }}
+            </option>
+          </select>
+        </div>
 
-        <label class="block">{{ t('process') }}</label>
-        <input
-          v-model="form.process"
-          @input="form.process = toHalfWidth(form.process)"
-          type="text"
-          placeholder="Process"
-          class="border rounded px-3 py-2 w-full"
-        />
+        <div>
+          <label class="block">
+            <span class="block mb-1">{{ t('measurement') }}</span>
 
-        <label class="block">{{ t('measurement') }}</label>
-        <input
-          v-model="form.measurement"
-          @input="form.measurement = toHalfWidth(form.measurement)"
-          type="text"
-          placeholder="Measurable"
-          class="border rounded px-3 py-2 w-full"
-        />
+            <div
+              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
+              @click="form.measurement = form.measurement ? 0 : 1"
+            >
+              <input
+                type="checkbox"
+                v-model="form.measurement"
+                :true-value="1"
+                :false-value="0"
+                class="w-4 h-4"
+              />
+              <span class="ml-2 text-gray-700">
+                {{ form.measurement ? t('yes') : t('no') }}
+              </span>
+            </div>
+          </label>
+        </div>
+
+        <div>
+          <label class="block">
+            <span class="block mb-1">{{ t('disabled') }}</span>
+
+            <div
+              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
+              @click="form.disabled = form.disabled ? 0 : 1"
+            >
+              <input
+                type="checkbox"
+                v-model="form.disabled"
+                :true-value="1"
+                :false-value="0"
+                class="w-4 h-4"
+              />
+              <span class="ml-2 text-gray-700">
+                {{ form.disabled ? t('enable') : t('disable') }}
+              </span>
+            </div>
+          </label>
+        </div>
+
        <!-- Tenant 選択 (Super Admin のみ) -->
         <div v-if="isSuperAdmin" class="mt-4">
           <label class="block mb-1">{{ t('tenant') }}</label>
@@ -52,14 +88,6 @@
         </div>
 
         <div>
-          <label class="block">{{ t('disabled') }}</label>
-          <select v-model="form.disabled" class="border rounded px-3 py-2 w-full">
-            <option :value="1">{{ t('enabled') }}</option>
-            <option :value="0">{{ t('disabled') }}</option>
-          </select>
-        </div>
-
-        <div>
           <label class="block">{{ t('display_order') }}</label>
           <input v-model.number="form.display_order" type="number" class="border rounded px-3 py-2 w-full" />
         </div>
@@ -67,6 +95,7 @@
         <div class="flex space-x-2">
           <button @click="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">{{ t('save') }}</button>
           <button
+            type="button"
             @click="router.get(route('devices.index'), props.filters, { preserveState: true })"
             class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
           >
@@ -95,15 +124,18 @@ const props = defineProps({
   filters: Object,
   tenants: Array,      // Super Admin のみ
   device: Object,
-  user: Object, // 追加
+  user: Object, 
+  processes: Array,
   mode: { type: String, default: '' }
 })
+
+const processes = props.processes
 
 const form = reactive({
   code: props.device?.code ?? '',
   name: props.device?.name ?? '',
-  model: props.device?.process ?? '',
-  serial_number: props.device?.measurement ?? '',
+  process_id: props.device?.process_id ?? '',
+  measurement: props.device?.measurement ?? 1,
   disabled: props.device?.disabled ?? 1,
   display_order: props.device?.display_order ?? 1,
   tenant_id: props.device
@@ -131,7 +163,7 @@ onMounted(() => {
     if (device) {
       form.code = device.code
       form.name = device.name
-      form.process = device.process
+      form.process_id = device.process_id 
       form.measurement = device.measurement
       form.disabled = device.disabled
       form.display_order = device.display_order
