@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Masters\SensorController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\TemperatureLogController;
+use App\Http\Controllers\Api\ProcessController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -24,6 +25,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/tenants', [TenantController::class, 'index']);
 
     Route::get('/menus', [MenuController::class, 'index']);
+    Route::get('/processes', [ProcessController::class, 'index']);
 
     Route::get('/temperature-logs', [TemperatureLogController::class, 'index']);  // 一覧取得
     Route::post('/temperature-logs', [TemperatureLogController::class, 'store']); // 登録

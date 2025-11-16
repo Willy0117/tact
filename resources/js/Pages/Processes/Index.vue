@@ -86,9 +86,9 @@
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
-              <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort==='name'">{{ form.name==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2">{{ t('created_at') }}</th>
+            <th class="px-3 py-2">{{ t('updated_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
@@ -100,8 +100,6 @@
             </td>
             <td class="px-3 py-2">{{ process.name }}</td>
             <td class="px-3 py-2">{{ process.created_at ? dayjs(process.created_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
-            <td class="px-3 py-2 text-center">{{ process.disabled ? t('enable') : t('disable') }}</td>
-            <td class="px-3 py-2 text-center">{{ process.display_order }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copyprocess(process.id)" class="text-green-500 hover:text-green-700">
                 <DocumentDuplicateIcon class="w-4 h-4" />

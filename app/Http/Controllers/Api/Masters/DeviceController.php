@@ -37,7 +37,7 @@ class DeviceController extends Controller
         }
 
         // クエリ作成
-        $query = Device::where('tenant_id', $request->tenant_id);
+        $query = Device::where('tenant_id', $request->tenant_id)->where('disabled', 1); // ここを追加
 
         if ($request->q) {
             $query->where('name', 'like', "%{$request->q}%");

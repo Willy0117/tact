@@ -116,6 +116,8 @@
   "tenant_id": "テナント",
   "tenant": "テナント",
   "add_tenant": "テナント追加",
+  "process_list": "工程一覧",
+  "add_process": "工程追加",
   "contact_email": "メールアドレス",
   "contact_phone": "TEL",
   "import_menu": "献立インポート（確認プレビュー付き）",

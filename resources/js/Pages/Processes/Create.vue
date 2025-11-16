@@ -60,9 +60,9 @@ onMounted(() => {
 })
 
 const submit = () => {
-  router.post(route('processs.store'), form, {
+  router.post(route('processes.store'), form, {
     preserveState: true,
-    onSuccess: () => router.get(route('processs.index', props.filters)), // index の検索条件を保持して戻る
+    onSuccess: () => router.get(route('processes.index', props.filters)), // index の検索条件を保持して戻る
     onError: (errs) => Object.assign(errors, errs)
   })
 }

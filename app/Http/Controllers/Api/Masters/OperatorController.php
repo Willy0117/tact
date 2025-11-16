@@ -37,8 +37,8 @@ class OperatorController extends Controller
         }
 
         // クエリ作成
-        $query = Operator::where('tenant_id', $request->tenant_id);
-
+        $query = Operator::where('tenant_id', $request->tenant_id)->where('disabled', 1);
+        
         if ($request->q) {
             $query->where('name', 'like', "%{$request->q}%");
         }

@@ -2,31 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class TemperatureLog extends Model
-{
-    use HasFactory;
+class TemperatureLog extends Model {
 
     protected $fillable = [
         'tenant_id',
-        'sensor_id',
-        'device_id', 
-        'menu_id',
-        'process_id',
+        'serial_number',
+        'device_id',
         'operator_id',
-        'temperature',
-        'measured_at',
+        'menu_id',
+        'sensor_id',
+        'temperatures', // ← 修正後の項目
     ];
 
-    protected $dates = [
-        'measured_at',
+    protected $casts = [
+        'temperatures' => 'array',        // JSON配列として扱う
     ];
 
-    public function sensor()
+    // リレーション例（必要に応じて追加）
+    public function tenant()
     {
-        return $this->belongsTo(Sensor::class);
+        return $this->belongsTo(Tenant::class);
     }
 
     public function device()
@@ -34,19 +31,20 @@ class TemperatureLog extends Model
         return $this->belongsTo(Device::class);
     }
 
-    public function menu()
-    {
-        return $this->belongsTo(Menu::class);
-    }
-
-    public function process()
-    {
-        return $this->belongsTo(Process::class);
-    }
-
     public function operator()
     {
         return $this->belongsTo(Operator::class);
     }
+  
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class, 'dish_id'); // dish_id が menus.id を参照
+    }
+
+    public function sensor()
+    {
+        return $this->belongsTo(Sensor::class);
+    }
 }
+
 
