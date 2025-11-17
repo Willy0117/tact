@@ -127,6 +127,9 @@
   "time": "時間",
   "success_saved": "献立データを保存しました。",
   "error_save": "保存に失敗しました。",
-  "please_select_file": "ファイルを選択してください"  
+  "please_select_file": "ファイルを選択してください",
+  "temperature": "計測結果",
+  "temperatures": "計測結果",
+  "week": "週"  
 }
 

@@ -31,6 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('permissions', \App\Http\Controllers\PermissionController::class);
     Route::post('permissions/bulk-delete', [\App\Http\Controllers\PermissionController::class, 'bulkDelete'])->name('permissions.bulkDelete');
 
+    Route::resource('temperatures', \App\Http\Controllers\TemperatureController::class);
     // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');

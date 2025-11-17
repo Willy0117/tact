@@ -131,6 +131,12 @@ const showAccessControl = computed(() => {
           <HomeIcon class="w-5 h-5"/>
           <span v-if="!collapsed" class="ml-2">{{ t('dashboard') }}</span>
         </Link>
+        <Link :href="route('temperatures.index')"
+              class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
+              :class="isActive('temperatures.index') ? 'bg-gray-300 font-semibold' : ''">
+          <CubeIcon class="w-5 h-5"/>
+          <span v-if="!collapsed" class="ml-2">{{ t('temperatures') }}</span>
+        </Link>        
         <!-- 献立関連メニュー -->
         <button @click="toggleSubMenu('menus')"
                 class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">

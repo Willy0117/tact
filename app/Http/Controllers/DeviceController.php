@@ -31,11 +31,9 @@ class DeviceController extends Controller
         }
         if ($processId = $request->input('process_id')) {
             $query->where('process_id', $processId);
-            //$query->where('process', 'like', "%{$process}%");
         }
         if ($measurement = $request->input('measurement')) {
             $query->where('measurement', $measurement);
-//          $query->where('measurement', 'like', "%{$measurement}%");
         }
 
         // ソート
