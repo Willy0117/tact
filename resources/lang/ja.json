@@ -130,6 +130,8 @@
   "please_select_file": "ファイルを選択してください",
   "temperature": "計測結果",
   "temperatures": "計測結果",
-  "week": "週"  
+  "week": "週",
+  "remember": "ログイン状態を保持する",
+  "forgot_password": "パスワードをお忘れですか？"
 }
 
