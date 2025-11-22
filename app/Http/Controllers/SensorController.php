@@ -173,6 +173,24 @@ class SensorController extends Controller
         Sensor::whereIn('id', $request->ids)->delete();
         return redirect()->route('sensors.index')->with('success', __('Selected sensors have been deleted.'));
     }
+
+    public function autocomplete(Request $request)
+    {
+        $search = $request->input('q');
+
+        $sensors = Sensor::query()
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'label' => "{$m->name} ({$m->serial_number})"
+            ]);
+
+        return response()->json($sensors);
+    }
+
     // API Real Check
     public function checkCode(Request $request)
     {

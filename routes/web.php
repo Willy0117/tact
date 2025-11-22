@@ -32,6 +32,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('permissions/bulk-delete', [\App\Http\Controllers\PermissionController::class, 'bulkDelete'])->name('permissions.bulkDelete');
 
     Route::resource('temperatures', \App\Http\Controllers\TemperatureController::class);
+
+    // autocomplete用（Ajax）
+    Route::get('/menus/autocomplete', [\App\Http\Controllers\MenuController::class, 'autocomplete']);
+    Route::get('/sensors/autocomplete', [\App\Http\Controllers\SensorController::class, 'autocomplete']);
+    Route::get('/devices/autocomplete', [\App\Http\Controllers\DeviceController::class, 'autocomplete']);
+    Route::get('/operators/autocomplete', [\App\Http\Controllers\OperatorController::class, 'autocomplete']);
+
     // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');
@@ -80,19 +87,6 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-});
-
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified'])->group(function () {
-    Route::resource('companies', \App\Http\Controllers\Admin\CompanyController::class);
-});
-
-Route::get('/exam-application', function () {
-    return Inertia::render('Exam/ExamApplication');
-})->middleware(['auth', 'verified'])->name('exam.application');
-
-Route::prefix('exam')->name('exam.')->middleware(['auth', 'verified'])->group(function () {
-    Route::get('applications', [\App\Http\Controllers\ExamApplicationController::class, 'index'])->name('applications.index');
-    Route::get('applications/{id}', [\App\Http\Controllers\ExamApplicationController::class, 'show'])->name('applications.show');
 });
 
 Route::post('/locale', function (Request $request) {

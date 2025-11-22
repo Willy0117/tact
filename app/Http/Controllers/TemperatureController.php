@@ -30,10 +30,29 @@ class TemperatureController extends Controller
             $query->where('operator_id', $operatorId);
         }
 
-        if ($serialNumber = $request->input('serial_number')) {
-            $query->where('serial_number', 'like', "%$serialNumber%");
+        if ($handyNo = $request->input('handy_no')) {
+            $query->where('handy_no', $handyNo);
         }
 
+        // 日付絞り込み（献立日 or 調理日）
+        $dateFrom = $request->input('date_from');
+        $dateTo   = $request->input('date_to');
+        $dateType = $request->input('date_type', 'serving'); // デフォルト献立日
+
+        if ($dateFrom) {
+            if ($dateType === 'serving') {
+                $query->whereHas('menu', fn($q) => $q->where('serving_date', '>=', $dateFrom));
+            } else {
+                $query->whereHas('menu', fn($q) => $q->where('cooking_date', '>=', $dateFrom));
+            }
+        }
+        if ($dateTo) {
+            if ($dateType === 'serving') {
+                $query->whereHas('menu', fn($q) => $q->where('serving_date', '<=', $dateTo));
+            } else {
+                $query->whereHas('menu', fn($q) => $q->where('cooking_date', '<=', $dateTo));
+            }
+        }
         // ソート
         $sortBy = $request->input('sort_by', 'id');
         $sortDir = $request->input('sort_dir', 'asc');
@@ -45,7 +64,7 @@ class TemperatureController extends Controller
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        $logs = Temperature::with(['menu', 'sensor', 'device', 'operator']) // ← 献立情報をロード
+        $logs = $query->with(['menu', 'sensor', 'device', 'operator']) // ← 献立情報をロード
             ->orderBy('created_at', 'desc')
             ->paginate($perPage)
             ->withQueryString();
@@ -54,7 +73,7 @@ class TemperatureController extends Controller
             'logs' => $logs,
             'tenants' => $tenants,
             'user' => $request->user(),
-            'filters' => $request->only(['menu_id','sensor_id','device_id','operator_id','serial_number','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['menu_id','sensor_id','device_id','operator_id','handy_no','per_page','sort_by','sort_dir']),
         ]);
     }
 }

@@ -59,6 +59,7 @@
   "sensor_has_been_deleted": "測定機器を削除しました",
   "code_already_exists": "コードは既に存在します",
   "serial_number_already_exists": "シリアル番号は既に存在します",
+  "handy_no": "測定器番号",
 
   "operator_list": "作業者一覧",
   "add_operator": "作業者追加",

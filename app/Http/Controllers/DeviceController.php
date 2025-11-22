@@ -174,6 +174,24 @@ class DeviceController extends Controller
         Device::whereIn('id', $request->ids)->delete();
         return redirect()->route('devices.index')->with('success', __('Selected devices have been deleted.'));
     }
+
+    public function autocomplete(Request $request)
+    {
+        $search = $request->input('q');
+
+        $devices = Device::query()
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'label' => "{$m->name} ({$m->code})"
+            ]);
+
+        return response()->json($devices);
+    }
+
     // API Real Check
     public function checkCode(Request $request)
     {

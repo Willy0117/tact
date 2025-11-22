@@ -2,17 +2,100 @@
   <AppLayout>
     <template #header>{{ t('temperature') }}</template>
 
-    <div class="p-6">
-      <!-- 検索フォーム -->
-      <div class="flex gap-2 mb-4">
-        <input v-model="form.menu_id" type="text" placeholder="Menu ID" class="border rounded px-3 py-2" />
-        <input v-model="form.sensor_id" type="text" placeholder="Sensor ID" class="border rounded px-3 py-2" />
-        <input v-model="form.device_id" type="text" placeholder="Device ID" class="border rounded px-3 py-2" />
-        <input v-model="form.operator_id" type="text" placeholder="Operator ID" class="border rounded px-3 py-2" />
-        <input v-model="form.serial_number" type="text" placeholder="Serial Number" class="border rounded px-3 py-2" />
-        <button @click="submitSearch" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          {{ t('search') }}
-        </button>
+    <div class="p-6 space-y-4">
+
+     <!-- 検索フォーム -->
+      <div class="grid grid-cols-5 gap-2 items-end">
+          
+          <!-- Menu Autocomplete -->
+          <Autocomplete
+            v-model="form.menu_id"
+            label="Dish Name"
+            placeholder="Type dish name / serving date"
+            fetch-url="/menus/autocomplete"
+          />
+
+          <Autocomplete
+            v-model="form.sensor_id"
+            label="Sensor"
+            placeholder="Select sensor"
+            fetch-url="/sensors/autocomplete"
+          />
+
+          <Autocomplete
+            v-model="form.device_id"
+            label="Device"
+            placeholder="Select device"
+            fetch-url="/devices/autocomplete"
+          />
+
+          <Autocomplete
+            v-model="form.operator_id"
+            label="Operator"
+            placeholder="Select operator / type for search"
+            fetch-url="/operators/autocomplete"
+          />
+
+          <!-- Handy No -->
+          <div>
+            <label class="block text-sm font-medium mb-1">{{ t('handy_no') }}</label>
+            <input type="text" v-model="form.handy_no" placeholder="Handy No" class="border rounded px-3 py-2 w-full"/>
+          </div>
+      </div>
+      <div class="grid grid-cols-5 gap-2 items-end">
+
+          <!-- 2行目：日付 + 献立日/調理日 + 検索ボタン -->
+          <!-- From日 -->
+          <div class="relative">
+            <label class="block text-sm font-medium mb-1">{{ t('from') }}</label>
+            <div class="relative flex items-center">
+              <input 
+                type="date" 
+                v-model="form.date_from" 
+                class="w-full border rounded px-3 py-2 pr-8" 
+              />
+              <button 
+                v-if="form.date_from"
+                @click="form.date_from = ''"
+                type="button"
+                class="absolute right-2 text-gray-400 hover:text-gray-600 flex items-center justify-center h-full"
+              >
+                X
+              </button>
+            </div>
+          </div>
+
+          <!-- To日 -->
+          <div class="relative">
+            <label class="block text-sm font-medium mb-1">{{ t('to') }}</label>
+            <div class="relative flex items-center">
+              <input 
+                type="date" 
+                v-model="form.date_to" 
+                class="w-full border rounded px-3 py-2 pr-8" 
+              />
+              <button 
+                v-if="form.date_to"
+                @click="form.date_to = ''"
+                type="button"
+                class="absolute right-2 text-gray-400 hover:text-gray-600 flex items-center justify-center h-full"
+              >
+                X
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">{{ t('date_type') }}</label>
+            <select v-model="form.date_type" class="border rounded px-3 py-2 pr-8 appearance-none">
+              <option value="serving">{{ t('serving_date') }}</option>
+              <option value="cooking">{{ t('cooking_date') }}</option>
+            </select>
+          </div>
+ 
+        <!-- 検索ボタンを右端 -->
+          <button @click="submitSearch" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            {{ t('search') }}
+          </button>
       </div>
 
       <!-- ログ一覧テーブル -->
@@ -22,6 +105,9 @@
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('menu_id')">
               {{ t('dish_name') }}
               <span v-if="form.sort==='menu_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('menu_id')">
+              {{ form.date_type === 'serving' ? t('serving_date') : t('cooking_date') }}
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('sensor_id')">
               {{ t('sensor') }}
@@ -35,13 +121,12 @@
               {{ t('operator') }}
               <span v-if="form.sort==='operator_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serial_number')">
-              {{ t('serial_number') }}
-              <span v-if="form.sort==='serial_number'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('handy_no')">
+              {{ t('handy_no') }}
+              <span v-if="form.sort==='handy_no'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('temperatures')">
+            <th>
               {{ t('temperatures') }}
-              <span v-if="form.sort==='temperatures'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('updated_at')">
               {{ t('updated_at') }}
@@ -52,10 +137,17 @@
         <tbody>
           <tr v-for="log in logs.data" :key="log.id" class="odd:bg-white even:bg-gray-100">
             <td>{{ log.menu ? log.menu.dish_name : '-' }}</td>
+            <td>{{ log.menu 
+                ? (form.date_type === 'serving' 
+                    ? dayjs(log.menu.serving_date).format('YYYY-MM-DD') 
+                    : dayjs(log.menu.cooking_date).format('YYYY-MM-DD')) 
+                : '-' 
+                }}        
+            </td>
             <td>{{ log.sensor ? log.sensor.name : '-' }}</td>
             <td>{{ log.device ? log.device.name : '-' }}</td>
             <td>{{ log.operator ? log.operator.name : '-' }}</td>
-            <td class="px-3 py-2">{{ log.serial_number }}</td>
+            <td class="mr px-3 py-2">{{ log.handy_no }}</td>
             <td>
                 <ul>
                     <li v-for="temp in log.temperatures" :key="temp.recorded_at">
@@ -77,10 +169,13 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
-import { ref, reactive, computed } from 'vue'
+import Autocomplete from '@/Components/Autocomplete.vue'
+
+import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 
 const props = defineProps({
   logs: Object,
@@ -89,40 +184,38 @@ const props = defineProps({
   filters: Object
 })
 
-console.log(props.logs);
-
 const { t } = useI18n()
 
-// 検索・ソート・ページネーション用
+// Form
 const form = reactive({
   menu_id: props.filters.menu_id || '',
   sensor_id: props.filters.sensor_id || '',
   device_id: props.filters.device_id || '',
   operator_id: props.filters.operator_id || '',
-  serial_number: props.filters.serial_number || '',
+  handy_no: props.filters.handy_no || '',
   per_page: props.filters.per_page || 20,
   sort: props.filters.sort_by || 'id',
-  direction: props.filters.sort_dir || 'asc'
+  direction: props.filters.sort_dir || 'asc',
+  date_from: props.filters.date_from || '',
+  date_to: props.filters.date_to || '',
+  date_type: props.filters.date_type || 'serving'
 })
 
-// ページネーション用
 const startItem = computed(() => props.logs.per_page * (props.logs.current_page - 1) + 1)
 const endItem = computed(() => Math.min(props.logs.per_page * props.logs.current_page, props.logs.total))
 
-// 検索実行
-const submitSearch = () => {
-  router.get(route('temperatures.index'), { ...form, page: 1 }, { preserveState: true })
-}
+// Search
+const submitSearch = () => { router.get(route('temperatures.index'), {...form,page:1}, {preserveState:true}) }
+const goPage = (page) => { router.get(route('temperatures.index'), {...form,page}, {preserveState:true}) }
 
-// ページ移動
-const goPage = (page) => {
-  router.get(route('temperatures.index'), { ...form, page }, { preserveState: true })
-}
-
-// ソート
+// Sort
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort===field) form.direction=form.direction==='asc'?'desc':'asc'
+  else { form.sort=field; form.direction='asc' }
   submitSearch()
 }
+
 </script>
+
+
+

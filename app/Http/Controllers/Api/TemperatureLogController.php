@@ -49,7 +49,7 @@ class TemperatureLogController extends Controller
         Log::info('TemperatureLogController@store request', $request->all());
 
         $validated = $request->validate([
-            'handy_no'          => 'required|string',     // serial_number と同じ
+            'handy_no'          => 'required|integer',     
             'device_id'         => 'required|integer|exists:devices,id',
             'operator_id'       => 'required|integer|exists:operators,id',
             'dish_id'           => 'required|integer|exists:menus,id',
@@ -94,7 +94,7 @@ class TemperatureLogController extends Controller
         // ---------------------------------------------------------
         $log = TemperatureLog::create([
             'tenant_id'        => $tenantId,
-            'serial_number'    => $validated['handy_no'],
+            'handy_no'         => $validated['handy_no'],
             'device_id'        => $validated['device_id'],
             'operator_id'      => $validated['operator_id'],
             'menu_id'          => $validated['dish_id'],

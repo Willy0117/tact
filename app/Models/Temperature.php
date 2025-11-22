@@ -10,7 +10,7 @@ class Temperature extends Model {
 
     protected $fillable = [
         'tenant_id',
-        'serial_number',
+        'handy_no',
         'device_id',
         'operator_id',
         'menu_id',

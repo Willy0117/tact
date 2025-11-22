@@ -157,6 +157,24 @@ class OperatorController extends Controller
         Operator::whereIn('id', $request->ids)->delete();
         return redirect()->route('operators.index')->with('success', __('Selected operators have been deleted.'));
     }
+
+    public function autocomplete(Request $request)
+    {
+        $search = $request->input('q');
+
+        $operators = Operator::query()
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'label' => "{$m->name} ({$m->code})"
+            ]);
+
+        return response()->json($operators);
+    }
+
     // API Real Check
     public function checkCode(Request $request)
     {

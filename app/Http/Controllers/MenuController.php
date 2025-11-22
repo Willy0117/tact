@@ -403,37 +403,22 @@ class MenuController extends Controller
             'weekStart' => $startDate->toDateString(),
         ]);
     }
-    /*    
-    public function weekly()
+    
+    public function autocomplete(Request $request)
     {
-        $startDate = now()->startOfWeek();
-        $endDate = $startDate->copy()->addDays(6);
+        $search = $request->input('q');
 
-        // メニューを取得し「日付 → 時間 → 配列」に変換
-        $menus = Menu::whereBetween('serving_date', [$startDate, $endDate])
-            ->orderBy('serving_time')
+        $menus = Menu::query()
+            ->when($search, fn($q) => $q->where('dish_name', 'like', "%{$search}%"))
+            ->orderBy('serving_date', 'desc')
+            ->limit(20)
             ->get()
-            ->groupBy(function ($menu) {
-                return $menu->serving_date->toDateString();
-            })
-            ->map(function ($dayGroup) {
-                return $dayGroup->groupBy(function ($menu) {
-                    return \Carbon\Carbon::parse($menu->serving_time)->format('H:i'); // ← 秒削除
-                });
-            });
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'label' => "{$m->dish_name} ({$m->serving_date})"
+            ]);
 
-        // distinct で使用する時間も同様に "HH:MM" に揃える
-        $servingTimes = Menu::whereBetween('serving_date', [$startDate, $endDate])
-            ->selectRaw("DATE_FORMAT(serving_time, '%H:%i') as serving_time")
-            ->distinct()
-            ->orderBy('serving_time')
-            ->pluck('serving_time');
-
-        return Inertia::render('Menus/Weekly', [
-            'menuData' => $menus,
-            'servingTimes' => $servingTimes,
-            'weekStart' => $startDate->toDateString(),
-        ]);
+        return response()->json($menus);
     }
-    */
+
 }
