@@ -115,8 +115,14 @@
               {{ t('dish_name') }}
               <span v-if="form.sort==='menu_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('date_type')">
+            <th
+              class="px-3 py-2 cursor-pointer"
+              @click="toggleDateSort"
+            >
               {{ form.date_type === 'serving' ? t('serving_date') : t('cooking_date') }}
+              <span v-if="form.sort === 'menu_date'">
+                {{ form.direction === 'asc' ? '▲' : '▼' }}
+              </span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('sensor_id')">
               {{ t('sensor') }}
@@ -211,7 +217,7 @@ const form = reactive({
 })
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
-  menu_id: form.filters.menu_id || '',
+  menu_id: form.menu_id || '',
   sensor_id: form.sensor_id || '',
   device_id: form.device_id || '',
   operator_id: form.operator_id || '',
@@ -232,6 +238,11 @@ const endItem = computed(() => Math.min(props.logs.per_page * props.logs.current
 const submitSearch = () => { router.get(route('temperatures.index'), {...form,page:1}, {preserveState:true}) }
 const goPage = (page) => { router.get(route('temperatures.index'), {...form,page}, {preserveState:true}) }
 
+const toggleDateSort = () => {
+  form.sort = 'menu_date'
+  form.direction = form.direction === 'asc' ? 'desc' : 'asc'
+  submitSearch()
+}
 // Sort
 const sortBy = (field) => {
   if (form.sort===field) form.direction=form.direction==='asc'?'desc':'asc'

@@ -64,7 +64,9 @@ class MenuController extends Controller
             $query->where($dateField, '<=', $request->end_date);
         }
 
-        // ソート（1回だけ）
+        $sorted = false;
+
+        // 明示的 sort がある場合
         if ($request->sort) {
             [$field, $direction] = explode(':', $request->sort);
 
@@ -73,6 +75,25 @@ class MenuController extends Controller
                 in_array(strtolower($direction), ['asc', 'desc'])
             ) {
                 $query->orderBy($field, $direction);
+                $sorted = true;
+            }
+        }
+
+        // ★ デフォルトソート（sort が無い or 不正）
+        if (!$sorted) {
+            if ($request->date_type === 'cooking_date') {
+                // 調理日基準
+                $query
+                    ->orderBy('cooking_date', 'asc')
+                    ->orderBy('serving_date', 'asc')
+                    ->orderBy('serving_time', 'asc')
+                    ->orderBy('display_order', 'asc');
+            } else {
+                // 献立日基準（デフォルト）
+                $query
+                    ->orderBy('serving_date', 'asc')
+                    ->orderBy('serving_time', 'asc')
+                    ->orderBy('display_order', 'asc');
             }
         }
 
