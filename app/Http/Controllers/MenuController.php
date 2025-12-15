@@ -152,6 +152,7 @@ class MenuController extends Controller
                 'cooking_date_from', 'cooking_date_to',
                 'dish_name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
             ]),
+            'redirect_to' => $request->redirect_to,
         ]);
     }
 
@@ -401,6 +402,7 @@ class MenuController extends Controller
             'menuData' => $menus,
             'servingTimes' => $servingTimes,
             'weekStart' => $startDate->toDateString(),
+            'redirect_to' => route('menus.weekly'),
         ]);
     }
     

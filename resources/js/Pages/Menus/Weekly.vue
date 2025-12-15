@@ -10,6 +10,7 @@
             class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
           >
             ＋ {{ t('add_menu') }}
+            <input type="hidden" v-model="form.redirect_to" />
           </Link>
 
           <div class="inline-flex border rounded overflow-hidden">
@@ -101,7 +102,12 @@ const { t } = useI18n()
 const props = defineProps({
   menuData: Object,        // { '2025-11-03': { '08:00': [ {id:1,name:'...'} ] } }
   servingTimes: Array,     // ['08:00', '12:00', '18:00']
-  weekStart: String        // '2025-11-03'
+  weekStart: String,        // '2025-11-03'
+  redirect_to: String,
+})
+
+const form = reactive({
+  redirect_to: props.redirect_to, // ← ここ重要
 })
 
 const getMonday = (dateStr) => {

@@ -7,6 +7,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SetLocaleController;
 use Illuminate\Http\Request;
 
+Route::get('/', function () {
+    return redirect()->route('login');
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -79,7 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // 他の認証が必要なルートもここに追加
 });
-
+/*
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -88,7 +92,7 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
-
+*/
 Route::post('/locale', function (Request $request) {
     $locale = $request->input('locale', 'en');
     session(['locale' => $locale]);
