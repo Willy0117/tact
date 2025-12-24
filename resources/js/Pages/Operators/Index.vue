@@ -54,7 +54,11 @@
 
         <!-- per_page + add -->
         <div class="flex items-center gap-2">
-          <select v-model.number="form.per_page" @change="submitSearch" class="border rounded px-3 py-2 h-10">
+          <select
+            v-model.number="form.per_page"
+            @change="submitSearch"
+            class="border rounded px-3 py-2 w-16 h-10"
+          >
             <option v-for="n in [10,20,30,50]" :key="n" :value="n">{{ n }}</option>
           </select>
 
@@ -79,13 +83,15 @@
       </div>
 
       <!-- センサー一覧テーブル -->
-      <table class="min-w-full table-auto border-collapse border border-gray-300">
+      <table class="min-w-full table-auto border-collapse border border-gray-300 text-sm">
         <thead>
           <tr class="bg-gray-200">
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
-            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
+            <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
+              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>            
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
               <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>

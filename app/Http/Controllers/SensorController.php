@@ -46,7 +46,7 @@ class SensorController extends Controller
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
-        $sensors = Sensor::query()
+        $sensors = $query
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->when($request->model, fn($q,$v)=>$q->where('model','like',"%$v%"))

@@ -3,7 +3,7 @@
     <template #header>{{ t('menu_list') }}</template>
 
     <!-- 検索 Drawer トリガー -->
-    <div class="p-4 flex justify-end">
+    <div class="p-2 flex justify-end">
       <button @click="openDrawer = true" class="p-2 rounded hover:bg-gray-200 flex items-center">
         <MagnifyingGlassIcon class="w-5 h-5 text-gray-600" />
       </button>
@@ -81,14 +81,22 @@
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
-            <th v-if="isSuperAdmin">{{ t('tenant') }}</th> 
+            <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
+              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th> 
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('dish_name')">
               {{ t('dish_name') }}
               <span v-if="form.sort==='dish_name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_date')">{{ t('serving_date') }}</th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_time')">{{ t('serving_time') }}</th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('cooking_date')">{{ t('cooking_date') }}</th>
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_date')">{{ t('serving_date') }}
+              <span v-if="form.sort==='serving_date'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_time')">{{ t('serving_time') }}
+              <span v-if="form.sort==='serving_time'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('cooking_date')">{{ t('cooking_date') }}
+              <span v-if="form.sort==='cooking_date'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>
             <th class="px-3 py-2">{{ t('materials') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
@@ -158,9 +166,9 @@ const form = reactive({
   cooking_date_from: props.filters.cooking_date_from || '',
   cooking_date_to: props.filters.cooking_date_to || '',
   materials: props.filters.materials || '',
-  per_page: props.filters.per_page || 10,
+  per_page: props.filters.per_page ?? 20,
   sort: props.filters.sort || 'id',
-  direction: props.filters.direction || 'asc'
+  direction: props.filters.direction ?? 'desc'
 })
 
 // 選択削除

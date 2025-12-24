@@ -47,23 +47,23 @@ class MenuController extends Controller
             $query->where('cooking_date', '<=', $cooking_date_to);
         }
         // ソート
-        $sortBy = $request->input('sort_by', 'id');
-        $sortDir = $request->input('sort_dir', 'asc');
-        $query->orderBy($sortBy, $sortDir);
+        $sortBy = $request->input('sort', 'id');
+        $sortDir = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        //$query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
-        $perPage = intval($request->input('per_page', 10));
+        $perPage = intval($request->input('per_page', 20));
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
-        $menus = Menu::query()
+        $menus = $query
             ->when($request->dish_name, fn($q, $v) => $q->where('dish_name', 'like', "%$v%"))
             ->when($request->process, fn($q, $v) => $q->where('process', 'like', "%$v%"))
             ->when($request->serving_date_from, fn($q, $v) => $q->where('serving_date', '>=', $v))
             ->when($request->serving_date_to, fn($q, $v) => $q->where('serving_date', '<=', $v))
             ->when($request->cooking_date_from, fn($q, $v) => $q->where('cooking_date', '>=', $v))
             ->when($request->cooking_date_to, fn($q, $v) => $q->where('cooking_date', '<=', $v))
-            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
+            ->orderBy($sortBy, $sortDir)
             ->paginate($perPage)
             ->withQueryString(); // 検索条件をページリンクに保持
 
@@ -404,8 +404,20 @@ class MenuController extends Controller
         $startDate = $weekStart ? Carbon::parse($weekStart) : now()->startOfWeek(Carbon::MONDAY);
         $endDate = $startDate->copy()->addDays(6);
 
+        $user = $request->user();
+
+        $query = Menu::query();
+
+        // テナント絞り込み（Super Admin は全件表示）
+        if (! $user->hasRole('Super Admin')) {
+            $query->where('tenant_id', $user->tenant_id);
+        }
+
+        // 期間条件は共通なのでベースクエリに入れる
+        $query->whereBetween('serving_date', [$startDate, $endDate]);
+
         // メニューを取得し「日付 → 時間 → 配列」に変換
-        $menus = Menu::whereBetween('serving_date', [$startDate, $endDate])
+        $menus = (clone $query)
             ->orderBy('serving_time')
             ->get()
             ->groupBy(function ($menu) {
@@ -418,7 +430,7 @@ class MenuController extends Controller
             });
 
         // distinct で使用する時間も同様に "HH:MM" に揃える
-        $servingTimes = Menu::whereBetween('serving_date', [$startDate, $endDate])
+        $servingTimes = (clone $query)
             ->selectRaw("DATE_FORMAT(serving_time, '%H:%i') as serving_time")
             ->distinct()
             ->orderBy('serving_time')
@@ -430,6 +442,7 @@ class MenuController extends Controller
             'weekStart' => $startDate->toDateString(),
             'redirect_to' => route('menus.weekly', ['weekStart' => $startDate->toDateString()]),
         ]);
+
     }
     
     public function autocomplete(Request $request)

@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <div class="p-6 text-sm">
+    <div class="p-6">
       <!-- 右側 Drawer -->
       <div v-if="openDrawer" class="fixed inset-0 z-40">
         <!-- 背景オーバーレイ -->
@@ -85,13 +85,15 @@
       </div>
 
       <!-- センサー一覧テーブル -->
-      <table class="min-w-full table-auto border-collapse border border-gray-300">
+      <table class="min-w-full table-auto border-collapse border border-gray-300 text-sm">
         <thead>
           <tr class="bg-gray-200">
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
-            <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
+            <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
+              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+            </th>             
             <!-- th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
               <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
@@ -187,9 +189,9 @@ const form = reactive({
   name: props.filters.name,
   model: props.filters.model,
   serial_number: props.filters.serial_number,
-  per_page: props.filters.per_page,
+  per_page: props.filters.per_page ?? 20,
   sort: props.filters.sort,
-  direction: props.filters.direction
+  direction: props.filters.direction ?? 'desc'
 })
 // 選択削除
 const selectedIds = ref([])

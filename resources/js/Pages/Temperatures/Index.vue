@@ -113,51 +113,50 @@
           <tr class="bg-gray-200">
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('menu_id')">
               {{ t('dish_name') }}
-              <span v-if="form.sort==='menu_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='menu_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th
               class="px-3 py-2 cursor-pointer"
               @click="toggleDateSort"
             >
               {{ form.date_type === 'serving' ? t('serving_date') : t('cooking_date') }}
-              <span v-if="form.sort === 'menu_date'">
-                {{ form.direction === 'asc' ? '▲' : '▼' }}
-              </span>
+              <span v-if="form.sort_by === 'menu_date'">{{ form.sort_dir === 'asc' ? '▲' : '▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('sensor_id')">
               {{ t('sensor') }}
-              <span v-if="form.sort==='sensor_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='sensor_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('device_id')">
               {{ t('device') }}
-              <span v-if="form.sort==='device_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='device_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('operator_id')">
               {{ t('operator') }}
-              <span v-if="form.sort==='operator_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='operator_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('handy_no')">
               {{ t('handy_no') }}
-              <span v-if="form.sort==='handy_no'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='handy_no'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th>
               {{ t('temperatures') }}
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('updated_at')">
               {{ t('updated_at') }}
-              <span v-if="form.sort==='updated_at'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='updated_at'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="log in logs.data" :key="log.id" class="odd:bg-white even:bg-gray-100">
             <td>{{ log.menu ? log.menu.dish_name : '-' }}</td>
-            <td>{{ log.menu 
-                ? (form.date_type === 'serving' 
-                    ? dayjs(log.menu.serving_date).format('YYYY-MM-DD') 
-                    : dayjs(log.menu.cooking_date).format('YYYY-MM-DD')) 
-                : '-' 
-                }}        
+            <td>
+              {{ form.date_type === 'serving'
+                  ? (log.menu
+                      ? dayjs(log.menu.serving_date).format('YYYY-MM-DD')
+                      : '-')
+                  : dayjs(log.created_at).format('YYYY-MM-DD')
+              }}
             </td>
             <td>{{ log.sensor ? log.sensor.name : '-' }}</td>
             <td>{{ log.device ? log.device.name : '-' }}</td>
@@ -198,7 +197,7 @@ const props = defineProps({
   user: Object,
   filters: Object
 })
-
+console.log(props.filters);
 const { t } = useI18n()
 
 // Form
@@ -209,8 +208,8 @@ const form = reactive({
   operator_id: props.filters.operator_id || '',
   handy_no: props.filters.handy_no || '',
   per_page: props.filters.per_page || 20,
-  sort: props.filters.sort_by || 'id',
-  direction: props.filters.sort_dir || 'asc',
+  sort_by: props.filters.sort_by || 'id',
+  sort_dir: props.filters.sort_dir || 'desc',
   date_from: props.filters.date_from || '',
   date_to: props.filters.date_to || '',
   date_type: props.filters.date_type || 'serving'
@@ -226,8 +225,8 @@ const persistQuery = () => ({
   date_to: form.filters.date_to || '',
   date_type: form.date_type || 'serving',
   per_page: form.per_page,
-  sort_by: form.sort,
-  sort_dir: form.direction,
+  sort_by: form.sort_by,
+  sort_dir: form.sort_dir,
   page: props.sensors.current_page
 })
 
@@ -239,14 +238,22 @@ const submitSearch = () => { router.get(route('temperatures.index'), {...form,pa
 const goPage = (page) => { router.get(route('temperatures.index'), {...form,page}, {preserveState:true}) }
 
 const toggleDateSort = () => {
-  form.sort = 'menu_date'
-  form.direction = form.direction === 'asc' ? 'desc' : 'asc'
+  if (form.sort_by === 'menu_date') {
+    // すでに日付ソート中 → 昇降切り替え
+    form.sort_dir = form.sort_dir === 'asc' ? 'desc' : 'asc'
+  } else {
+    // 初回クリック → 日付ソート開始
+    form.sort_by = 'menu_date'
+    form.sort_dir = 'desc' // 初期は新しい順がおすすめ
+  }
+
+  form.page = 1
   submitSearch()
 }
 // Sort
 const sortBy = (field) => {
-  if (form.sort===field) form.direction=form.direction==='asc'?'desc':'asc'
-  else { form.sort=field; form.direction='asc' }
+  if (form.sort_by===field) form.sort_dir=form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by=field; form.sort_dir='desc' }
   submitSearch()
 }
 

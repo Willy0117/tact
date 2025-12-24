@@ -16,7 +16,7 @@ class DeviceController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Device::query();
+        $query = Device::query()->with('process');
         // テナント絞り込み（Super Admin は全件表示）
         if (!$user->hasRole('Super Admin')) {
             $query->where('tenant_id', $user->tenant_id);
@@ -42,12 +42,12 @@ class DeviceController extends Controller
         $query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
-        $perPage = intval($request->input('per_page', 10));
+        $perPage = intval($request->input('per_page', 20));
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
         $processes = Process::all(['id', 'name']);
 
-        $devices = Device::with('process')
+        $devices = $query
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->when($request->process_id, fn($q,$v) => $q->where('process_id', $v))

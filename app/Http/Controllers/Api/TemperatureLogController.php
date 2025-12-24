@@ -61,7 +61,7 @@ class TemperatureLogController extends Controller
         // ---------------------------------------------------------
         // ① handy_no（serial_number）から sensor を特定
         // ---------------------------------------------------------
-        $sensor = Sensor::where('serial_number', $validated['handy_no'])->first();
+        $sensor = Sensor::find($validated['sensor_id']);//$sensor = Sensor::where('id', $validated['senser_id'])->first();
 
         if (!$sensor) {
             return response()->json([
@@ -98,7 +98,7 @@ class TemperatureLogController extends Controller
             'device_id'        => $validated['device_id'],
             'operator_id'      => $validated['operator_id'],
             'menu_id'          => $validated['dish_id'],
-            'sensor_id'        => $sensor->id,
+            'sensor_id'        => $validated['sensor_id'],
             'temperatures'     => $validated['temperatures'],
         ]);
 

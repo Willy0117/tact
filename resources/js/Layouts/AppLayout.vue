@@ -51,15 +51,14 @@
     </div>
   </div>
           <span class="text-gray-700 font-medium">{{ user.name }}</span>
-          <form @submit.prevent="logout">
-            <button
-              type="submit"
-              class="flex items-center space-x-2 text-red-600 hover:text-red-800 font-medium bg-transparent p-0 m-0 border-0 cursor-pointer"
-            >
-              <ArrowRightOnRectangleIcon class="w-5 h-5" />
-              <span>Logout</span>
-            </button>
-          </form>
+          <button
+            @click="logout"
+            type="button"
+            class="flex items-center space-x-2 text-red-600 hover:text-red-800 font-medium bg-transparent p-0 m-0 border-0 cursor-pointer"
+          >
+            <ArrowRightOnRectangleIcon class="w-5 h-5" />
+            <span>Logout</span>
+          </button>
 
           <!-- スマホ用ハンバーガーメニュー -->
           <button @click="toggleMenu" class="lg:hidden text-gray-600 text-xl">

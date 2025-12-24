@@ -36,11 +36,11 @@ class OperatorController extends Controller
         $query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
-        $perPage = intval($request->input('per_page', 10));
+        $perPage = intval($request->input('per_page', 20));
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
-        $operators = Operator::query()
+        $operators = $query
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')

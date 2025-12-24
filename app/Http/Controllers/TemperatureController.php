@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Process;
 use App\Models\Menu;
+use Carbon\Carbon;
 
 class TemperatureController extends Controller
 {
@@ -16,7 +17,9 @@ class TemperatureController extends Controller
         $user = $request->user();
 
         $query = Temperature::query();
-
+        if (! $user->hasRole('Super Admin')) {
+            $query->where('tenant_id', $user->tenant_id);
+        }
         // 検索
         if ($menuId = $request->input('menu_id')) {
             $query->where('menu_id', $menuId);
@@ -36,27 +39,38 @@ class TemperatureController extends Controller
         }
 
         // 日付絞り込み（献立日 or 調理日）
-        $dateFrom = $request->input('date_from');
-        $dateTo   = $request->input('date_to');
+        $dateFrom = $request->input('date_from', Carbon::today()->toDateString());
+        $dateTo   = $request->input('date_to', Carbon::today()->toDateString());
         $dateType = $request->input('date_type', 'serving'); // デフォルト献立日
 
-        if ($dateFrom) {
-            if ($dateType === 'serving') {
-                $query->whereHas('menu', fn($q) => $q->where('serving_date', '>=', $dateFrom));
-            } else {
-                $query->whereHas('menu', fn($q) => $q->where('cooking_date', '>=', $dateFrom));
+        if ($dateType === 'serving') {
+
+            if ($dateFrom) {
+                $query->whereHas('menu', fn ($q) =>
+                    $q->where('serving_date', '>=', $dateFrom)
+                );
             }
-        }
-        if ($dateTo) {
-            if ($dateType === 'serving') {
-                $query->whereHas('menu', fn($q) => $q->where('serving_date', '<=', $dateTo));
-            } else {
-                $query->whereHas('menu', fn($q) => $q->where('cooking_date', '<=', $dateTo));
+
+            if ($dateTo) {
+                $query->whereHas('menu', fn ($q) =>
+                    $q->where('serving_date', '<=', $dateTo)
+                );
+            }
+
+        } else {
+            // ★★★ ここが変更点 ★★★
+            // cooking の場合は TemperatureLog.created_at で絞り込む
+            if ($dateFrom) {
+                $query->whereDate('temperature_logs.created_at', '>=', $dateFrom);
+            }
+
+            if ($dateTo) {
+                $query->whereDate('temperature_logs.created_at', '<=', $dateTo);
             }
         }
 
-        $sort = $request->query('sort', 'updated_at');
-        $dir  = $request->query('direction') === 'asc' ? 'asc' : 'desc';
+        $sort = $request->query('sort_by', 'updated_at');
+        $dir  = $request->query('sort_dir') === 'asc' ? 'asc' : 'desc';
 
         if ($sort === 'menu_date') {
 
@@ -71,7 +85,7 @@ class TemperatureController extends Controller
                 )->orderBy(
                     Menu::select('serving_date')
                         ->whereColumn('menus.id', 'temperature_logs.menu_id'),
-                    'asc'
+                    'desc'
                 );
             } else {
                 // 献立日 → 配膳時刻
@@ -86,10 +100,10 @@ class TemperatureController extends Controller
             $query->orderBy(
                 Menu::select('serving_time')
                     ->whereColumn('menus.id', 'temperature_logs.menu_id'),
-                'asc'
+                'desc'
             )->orderBy(
                 'temperature_logs.updated_at',
-                'asc'
+                'desc'
             );
         } else {
 
@@ -121,7 +135,19 @@ class TemperatureController extends Controller
             'logs' => $logs,
             'tenants' => $tenants,
             'user' => $request->user(),
-            'filters' => $request->only(['menu_id','sensor_id','device_id','operator_id','handy_no','per_page','sort_by','sort_dir']),
+            'filters' => [
+                'menu_id'     => $request->input('menu_id'),
+                'sensor_id'   => $request->input('sensor_id'),
+                'device_id'   => $request->input('device_id'),
+                'operator_id' => $request->input('operator_id'),
+                'handy_no'    => $request->input('handy_no'),
+                'per_page'    => $perPage,
+                'sort_by'     => $sort,
+                'sort_dir'    => $dir,
+                'date_type'   => $dateType,
+                'date_from'   => $dateFrom,
+                'date_to'     => $dateTo,
+            ],
         ]);
     }
 }
