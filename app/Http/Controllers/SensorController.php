@@ -47,6 +47,10 @@ class SensorController extends Controller
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         $sensors = $query
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->when($request->model, fn($q,$v)=>$q->where('model','like',"%$v%"))
@@ -59,7 +63,7 @@ class SensorController extends Controller
             'sensors' => $sensors,
             'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['code','name','model','serial_number','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['tenant_id','code','name','model','serial_number','per_page','sort_by','sort_dir']),
         ]);
     }
 

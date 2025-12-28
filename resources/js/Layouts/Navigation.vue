@@ -20,7 +20,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const { props } = usePage()
-
+console.log(props)
 // Jetstream props
 const authUser = props.auth.user
 const currentTeam = authUser.current_team
@@ -351,7 +351,7 @@ const showAccessControl = computed(() => {
     <!-- メイン -->
     <div class="flex-1 flex flex-col">
       <header class="bg-white shadow flex items-center justify-between px-4 h-16">
-        <h1 class="text-lg font-semibold">My App</h1>
+        <h1 class="text-lg font-semibold">{{ props.app?.name }}</h1>
 
         <div class="flex items-center space-x-2">
           <button v-if="isMobile" class="lg:hidden p-2">

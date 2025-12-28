@@ -37,89 +37,81 @@ class TemperatureController extends Controller
         if ($handyNo = $request->input('handy_no')) {
             $query->where('handy_no', $handyNo);
         }
+        if ($processId = $request->input('process_id')) {
+            $query->where('process_id', $processId);
+        }
 
         // 日付絞り込み（献立日 or 調理日）
         $dateFrom = $request->input('date_from', Carbon::today()->toDateString());
         $dateTo   = $request->input('date_to', Carbon::today()->toDateString());
         $dateType = $request->input('date_type', 'serving'); // デフォルト献立日
-
+        /*
+        |--------------------------------------------------------------------------
+        | 日付絞り込み
+        |--------------------------------------------------------------------------
+        */
         if ($dateType === 'serving') {
 
-            if ($dateFrom) {
-                $query->whereHas('menu', fn ($q) =>
-                    $q->where('serving_date', '>=', $dateFrom)
-                );
-            }
-
-            if ($dateTo) {
-                $query->whereHas('menu', fn ($q) =>
-                    $q->where('serving_date', '<=', $dateTo)
-                );
-            }
+            $query->whereHas('menu', function ($q) use ($dateFrom, $dateTo) {
+                if ($dateFrom) {
+                    $q->where('serving_date', '>=', $dateFrom);
+                }
+                if ($dateTo) {
+                    $q->where('serving_date', '<=', $dateTo);
+                }
+            });
 
         } else {
-            // ★★★ ここが変更点 ★★★
-            // cooking の場合は TemperatureLog.created_at で絞り込む
+            // cooking：ログの記録日で絞り込み
             if ($dateFrom) {
-                $query->whereDate('temperature_logs.created_at', '>=', $dateFrom);
+                $query->whereDate('temperature_logs.updated_at', '>=', $dateFrom);
             }
-
             if ($dateTo) {
-                $query->whereDate('temperature_logs.created_at', '<=', $dateTo);
+                $query->whereDate('temperature_logs.updated_at', '<=', $dateTo);
             }
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ソート
+        |--------------------------------------------------------------------------
+        */
+        $allowedSorts = [
+            'menu_date',
+            'menu_id',
+            'device_id',
+            'sensor_id',
+            'operator_id',
+            'handy_no',
+            'process_id',
+            'updated_at',
+        ];
 
         $sort = $request->query('sort_by', 'updated_at');
         $dir  = $request->query('sort_dir') === 'asc' ? 'asc' : 'desc';
 
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'updated_at';
+        }
+
         if ($sort === 'menu_date') {
 
-            $dateType = $request->query('date_type', 'serving');
-
-            if ($dateType === 'cooking') {
-                // 調理日 → 献立日 → 配膳時刻
+            if ($dateType === 'serving') {
+                // 配膳日 + 配膳時間
                 $query->orderBy(
-                    Menu::select('cooking_date')
+                    Menu::selectRaw("TIMESTAMP(serving_date, COALESCE(serving_time, '00:00:00'))")
                         ->whereColumn('menus.id', 'temperature_logs.menu_id'),
                     $dir
-                )->orderBy(
-                    Menu::select('serving_date')
-                        ->whereColumn('menus.id', 'temperature_logs.menu_id'),
-                    'desc'
                 );
             } else {
-                // 献立日 → 配膳時刻
-                $query->orderBy(
-                    Menu::select('serving_date')
-                        ->whereColumn('menus.id', 'temperature_logs.menu_id'),
-                    $dir
-                );
+                // cooking：記録時刻
+                $query->orderBy('temperature_logs.updated_at', $dir);
             }
 
-            // 共通：配膳時刻 → ログの時系列
-            $query->orderBy(
-                Menu::select('serving_time')
-                    ->whereColumn('menus.id', 'temperature_logs.menu_id'),
-                'desc'
-            )->orderBy(
-                'temperature_logs.updated_at',
-                'desc'
-            );
+            // 安定ソート
+            $query->orderBy('temperature_logs.updated_at', 'desc');
+
         } else {
-
-            $allowed = [
-                'menu_id',
-                'device_id',
-                'sensor_id',
-                'operator_id',
-                'handy_no',
-                'updated_at',
-            ];
-
-            if (! in_array($sort, $allowed)) {
-                $sort = 'updated_at';
-            }
-
             $query->orderBy($sort, $dir);
         }
         // ページネーション
@@ -127,7 +119,7 @@ class TemperatureController extends Controller
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        $logs = $query->with(['menu', 'sensor', 'device', 'operator']) // ← 献立情報をロード
+        $logs = $query->with(['menu', 'sensor', 'device', 'operator', 'process']) // ← 献立情報をロード
             ->paginate($perPage)
             ->withQueryString();
 
@@ -141,6 +133,7 @@ class TemperatureController extends Controller
                 'device_id'   => $request->input('device_id'),
                 'operator_id' => $request->input('operator_id'),
                 'handy_no'    => $request->input('handy_no'),
+                'process_id'  => $request->input('process_id'),
                 'per_page'    => $perPage,
                 'sort_by'     => $sort,
                 'sort_dir'    => $dir,

@@ -121,4 +121,21 @@ class ProcessController extends Controller
         Process::whereIn('id', $request->ids)->delete();
         return redirect()->route('processes.index')->with('success', __('Selected processes have been deleted.'));
     }
+
+    public function autocomplete(Request $request)
+    {
+        $search = $request->input('q');
+
+        $processes = Process::query()
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'label' => "{$m->name}"
+            ]);
+
+        return response()->json($processes);
+    }    
 }

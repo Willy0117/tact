@@ -16,6 +16,9 @@ class TemperatureLogResource extends JsonResource
             'operator_id' => $this->operator_id,
             'dish_id' => $this->menu_id,         // DB の menu_id を dish_id に変換
             'sensor_id' => $this->sensor_id,
+            'process_id' => $this->process_id,
+            'process_name' => $this->process?->name,
+            'note' => $this->note,
             'created_at' => $this->created_at,
             'temperatures' => $this->temperatures,
         ];

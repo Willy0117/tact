@@ -32,8 +32,13 @@
           </div>
 
           <div class="p-4 space-y-3">
-            <!-- 既存 form をそのまま利用 -->
-            <!-- input v-model="form.code" type="text" placeholder="Code" class="border rounded px-3 py-2 w-full" / -->
+            <select v-if="isSuperAdmin" v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+              <option value="">{{ t('please_select') }}</option>
+              <option v-for="t in tenants" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </option>
+            </select>
+
             <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
             <input v-model="form.model" type="text" :placeholder="t('model')" class="border rounded px-3 py-2 w-full" />
             <input v-model="form.serial_number" type="text" :placeholder="t('serial number')" class="border rounded px-3 py-2 w-full" />
@@ -169,7 +174,7 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({
-      code: '', name: '', model: '', serial_number: '',
+      code: '', name: '', model: '', serial_number: '', tenant_id: '',
       per_page: 20, sort: 'id', direction: 'asc', page: 1
     })
   }
@@ -185,6 +190,7 @@ const openDrawer = ref(false)
 
 // 複数検索用に reactive 拡張
 const form = reactive({
+  tenant_id: props.filters.tenant_id,
   code: props.filters.code,
   name: props.filters.name,
   model: props.filters.model,
@@ -217,6 +223,7 @@ watch(() => props.sensors.current_page, () => {
 
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
+  tenant_id: form.tenant_id,
   code: form.code,
   name: form.name,
   model: form.model,

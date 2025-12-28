@@ -32,6 +32,12 @@
           </div>
 
           <div class="p-4 space-y-3">
+            <select v-if="isSuperAdmin" v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+              <option value="">{{ t('please_select') }}</option>
+              <option v-for="t in tenants" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </option>
+            </select>
             <!-- 既存 form をそのまま利用 -->
             <input v-model="form.code" type="text" :placeholder="t('code')" class="border rounded px-3 py-2 w-full" />
             <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
@@ -41,7 +47,11 @@
                 {{ p.name }}
               </option>
             </select>
-            <input v-model="form.measurement" type="text" placeholder="Measurement" class="border rounded px-3 py-2 w-full" />
+            <select v-model="form.measurement" class="border rounded px-3 py-2 w-full">
+              <option :value="null">{{ t('please_select')}}</option>
+              <option value="0">{{ t('dont') }}</option>
+              <option value="1">{{ t('do') }}</option>
+            </select>
 
             <div class="flex justify-end space-x-2 mt-4">
               <button @click="submitSearch(); openDrawer = false"
@@ -173,7 +183,7 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({
-      code: '', name: '', process_id: '', measurement: '',
+      code: '', name: '', process_id: '', measurement: '', tenant_id: '',
       per_page: 20, sort: 'id', direction: 'asc', page: 1
     })
   }
@@ -193,8 +203,9 @@ const form = reactive({
   code: props.filters.code,
   name: props.filters.name,
   process_id: props.filters.process_id,
+  tenant_id: props.filters.tenant_id,
   measurement: props.filters.measurement,
-  per_page: props.filters.per_page,
+  per_page: props.filters.per_page || 20,
   sort: props.filters.sort,
   direction: props.filters.direction  
 })
@@ -222,6 +233,7 @@ watch(() => props.devices.current_page, () => {
 
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
+  tenant_id: form.tenant_id,
   code: form.code,
   name: form.name,
   process_id: form.process_id,

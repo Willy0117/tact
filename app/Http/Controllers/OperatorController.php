@@ -41,6 +41,10 @@ class OperatorController extends Controller
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         $operators = $query
+            ->when(
+                $request->tenant > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant)
+            )
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
@@ -85,7 +89,7 @@ class OperatorController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'string', Rule::unique('operators')],
             'name' => ['required', 'string'],
-            'disabled' => ['required', 'boolean'],
+            'disabled' => ['required', 'integer'],
             'display_order' => ['required', 'integer'],
             'tenant_id' => ['nullable', 'exists:tenants,id'], 
         ], [
@@ -126,7 +130,7 @@ class OperatorController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'string', Rule::unique('operators')->ignore($operator->id)],
             'name' => ['required', 'string'],
-            'disabled' => ['required', 'boolean'],
+            'disabled' => ['required', 'integer'],
             'display_order' => ['required', 'integer'],
             'tenant_id' => ['nullable', 'exists:tenants,id'], 
         ], [

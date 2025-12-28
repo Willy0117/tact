@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/sensors/autocomplete', [\App\Http\Controllers\SensorController::class, 'autocomplete']);
     Route::get('/devices/autocomplete', [\App\Http\Controllers\DeviceController::class, 'autocomplete']);
     Route::get('/operators/autocomplete', [\App\Http\Controllers\OperatorController::class, 'autocomplete']);
+    Route::get('/processes/autocomplete', [\App\Http\Controllers\ProcessController::class, 'autocomplete']);
 
     // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);

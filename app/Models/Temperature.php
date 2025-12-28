@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory; // 追加
 use Illuminate\Database\Eloquent\Model;
 
 class Temperature extends Model {
 // 実際のテーブル名を指定
+    use HasFactory;
+
     protected $table = 'temperature_logs';
 
     protected $fillable = [
@@ -15,6 +18,8 @@ class Temperature extends Model {
         'operator_id',
         'menu_id',
         'sensor_id',
+        'process_id',
+        'note',
         'temperatures', // ← 修正後の項目
     ];
 
@@ -44,5 +49,10 @@ class Temperature extends Model {
     public function sensor()
     {
         return $this->belongsTo(Sensor::class, 'sensor_id');
+    }
+
+    public function process()
+    {
+        return $this->belongsTo(Process::class, 'process_id');
     }
 }

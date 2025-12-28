@@ -48,10 +48,17 @@ class DeviceController extends Controller
         $processes = Process::all(['id', 'name']);
 
         $devices = $query
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
             ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->when($request->process_id, fn($q,$v) => $q->where('process_id', $v))
-            ->when($request->measurement, fn($q,$v) => $q->where('measurement', $v))
+            ->when(
+                !is_null($request->measurement),
+                fn ($q) => $q->where('measurement', (int) $request->measurement)
+            )
             ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
             ->paginate($perPage)
             ->withQueryString(); // 検索条件をページリンクに保持
@@ -62,7 +69,7 @@ class DeviceController extends Controller
             'tenants' => $tenants,
             'user' => $user, 
             'processes' => $processes,
-            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','tenant_id']),
         ]);
     }
 

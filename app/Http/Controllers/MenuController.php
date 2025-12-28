@@ -241,11 +241,17 @@ class MenuController extends Controller
         $menus = $request->menus ?? [];
 
         foreach ($menus as $m) {
+            $servingTime = $m['serving_time'];
+
+            // 日付 or datetime で来た場合に時刻だけ抜く
+            if ($servingTime) {
+                $servingTime = Carbon::parse($servingTime)->format('H:i');
+            }
             Menu::create([
                 'tenant_id' => $tenantId,
                 'dish_name' => $m['dish_name'],
                 'serving_date' => $m['serving_date'],
-                'serving_time' => $m['serving_time'],
+                'serving_time' => $servingTime,
                 'cooking_date' => $m['cooking_date'] ?? $m['serving_date'],
                 'materials' => null,
                 'disabled' => 1,

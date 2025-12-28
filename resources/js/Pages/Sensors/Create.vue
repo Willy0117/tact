@@ -5,7 +5,7 @@
     <div class="p-6">
       <div class="space-y-4">
 
-        <div>
+        <!-- div>
           <label class="block">{{ t('code') }}</label>
           <input
             v-model="form.code"
@@ -15,7 +15,7 @@
             class="border rounded px-3 py-2 w-full"
           />
           <div v-if="errors.code" class="text-red-500 text-sm">{{ errors.code }}</div>
-        </div>
+        </div -->
 
         <div>
           <label class="block">{{ t('name') }}</label>
@@ -49,24 +49,29 @@
         <!-- Disabled -->
         <div>
           <label class="block">
-            <span class="block mb-1">{{ t('disabled') }}</span>
+            <span class="block mb-1">{{ t('status') }}</span>
 
-            <div
-              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
-              @click="form.disabled = form.disabled ? 0 : 1"
-            >
-              <input
-                type="checkbox"
-                v-model="form.disabled"
-                :true-value="1"
-                :false-value="0"
-                class="w-4 h-4"
-              />
-              <span class="ml-2 text-gray-700">
-                {{ form.disabled ? t('enable') : t('disable') }}
-              </span>
+            <div class="flex items-center space-x-6 h-10">
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  v-model.number="form.disabled"
+                  :value="1"
+                />
+                <span class="ml-2">{{ t('enable') }}</span>
+              </label>
+
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  v-model.number="form.disabled"
+                  :value="0"
+                />
+                <span class="ml-2">{{ t('disable') }}</span>
+              </label>
             </div>
           </label>
+
         </div>
         <!-- Tenant 選択 (Super Admin のみ) -->
         <div v-if="isSuperAdmin" class="mt-4">

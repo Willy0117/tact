@@ -157,7 +157,7 @@ const openDrawer = ref(false)
 // 複数検索用に reactive 拡張
 const form = reactive({
   name: props.filters.name,
-  per_page: props.filters.per_page,
+  per_page: props.filters.per_page || 20,
   sort: props.filters.sort,
 })
 // 選択削除

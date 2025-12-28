@@ -20,7 +20,7 @@ class Operator extends Model
     ];
 
     protected $casts = [
-        'disabled' => 'boolean',
+        'disabled' => 'integer',
         'display_order' => 'integer',
     ];
 

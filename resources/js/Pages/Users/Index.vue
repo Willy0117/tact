@@ -38,7 +38,7 @@
                 v-model.number="form.tenant_id"
                 class="border rounded px-3 py-2 w-full"
               >
-                <option :value="0"></option>
+                <option :value="0">{{ t('select') }}</option>
                 <option
                   v-for="tenant in tenants"
                   :key="tenant.id"

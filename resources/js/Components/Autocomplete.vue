@@ -7,7 +7,7 @@
         v-model="search"
         :placeholder="placeholder"
         class="w-full border rounded px-3 py-2 pr-8"
-        @focus="showDropdown = true"
+        @focus="onFocus"    
         @blur="hideDropdown"
         @input="onInput"
         @keydown="onKeyDown"
@@ -51,9 +51,23 @@ const options = ref([])
 const showDropdown = ref(false)
 const activeIndex = ref(-1)
 
+const onFocus = async () => {
+  showDropdown.value = true
+
+  // ★ 未入力なら全件取得
+  if (!options.value.length) {
+    await onInput()
+  }
+}
+
 const onInput = async () => {
   if (!props.fetchUrl) return
-  const res = await fetch(`${props.fetchUrl}?q=${encodeURIComponent(search.value)}`)
+
+  const q = search.value ?? ''
+
+  const res = await fetch(
+    `${props.fetchUrl}?q=${encodeURIComponent(q)}`
+  )
   options.value = await res.json()
   activeIndex.value = -1
 }

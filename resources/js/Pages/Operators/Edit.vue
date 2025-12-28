@@ -27,24 +27,29 @@
         <!-- Disabled -->
         <div>
           <label class="block">
-            <span class="block mb-1">{{ t('disabled') }}</span>
+            <span class="block mb-1">{{ t('status') }}</span>
 
-            <div
-              class="flex items-center border rounded px-3 h-10 bg-white cursor-pointer"
-              @click="form.disabled = form.disabled ? 0 : 1"
-            >
-              <input
-                type="checkbox"
-                v-model="form.disabled"
-                :true-value="1"
-                :false-value="0"
-                class="w-4 h-4"
-              />
-              <span class="ml-2 text-gray-700">
-                {{ form.disabled ? t('enable') : t('disable') }}
-              </span>
+            <div class="flex items-center space-x-6 h-10">
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  v-model.number="form.disabled"
+                  :value="1"
+                />
+                <span class="ml-2">{{ t('enable') }}</span>
+              </label>
+
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  v-model.number="form.disabled"
+                  :value="0"
+                />
+                <span class="ml-2">{{ t('disable') }}</span>
+              </label>
             </div>
           </label>
+
         </div>
         <!-- Tenant 選択 (Super Admin のみ) -->
         <div v-if="isSuperAdmin" class="mt-4">
@@ -111,7 +116,7 @@ const isSuperAdmin = computed(() =>
 const form = reactive({
   code: props.operator.code,
   name: props.operator.name,
-  disabled: props.operator.disabled,
+  disabled: props.operator?.disabled ?? 1,
   display_order: props.operator.display_order,
   tenant_id: props.operator?.tenant_id 
   ?? (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
@@ -121,6 +126,7 @@ const errors = reactive({
   code: '',
   name: '',
 })
+console.log('operator.disabled', typeof form.disabled, form.disabled)
 
 // リアルタイム重複チェック: code
 watch(() => form.code, async (newCode) => {

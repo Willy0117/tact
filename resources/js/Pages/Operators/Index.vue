@@ -33,8 +33,24 @@
 
           <div class="p-4 space-y-3">
             <!-- 既存 form をそのまま利用 -->
-            <input v-model="form.code" type="text" placeholder="Code" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.name" type="text" placeholder="Name" class="border rounded px-3 py-2 w-full" />
+            <div v-if="tenants && tenants.length">
+              <select
+                v-model.number="form.tenant"
+                :placeholder="t('select_tenant')"
+                class="border rounded px-3 py-2 w-full"
+              >
+                <option value="">{{ t('select_tenant') }}</option>
+                <option
+                  v-for="tenant in tenants"
+                  :key="tenant.id"
+                  :value="tenant.id"
+                >
+                  {{ tenant.name }}
+                </option>
+              </select>
+            </div>
+            <input v-model="form.code" type="text" :placeholder="t('code')" class="border rounded px-3 py-2 w-full" />
+            <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
 
             <div class="flex justify-end space-x-2 mt-4">
               <button @click="submitSearch(); openDrawer = false"
@@ -157,7 +173,7 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({
-      code: '', name: '',
+      code: '', name: '', tenant: '',
       per_page: 20, sort: 'id', direction: 'asc', page: 1
     })
   }
@@ -173,9 +189,10 @@ const openDrawer = ref(false)
 
 // 複数検索用に reactive 拡張
 const form = reactive({
+  tenant: props.filters.tenant,
   code: props.filters.code,
   name: props.filters.name,
-  per_page: props.filters.per_page,
+  per_page: props.filters.per_page || 20,
   sort: props.filters.sort,
 })
 // 選択削除
@@ -202,6 +219,7 @@ watch(() => props.operators.current_page, () => {
 
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
+  tenant: form.tenant,
   code: form.code,
   name: form.name,
   per_page: form.per_page,

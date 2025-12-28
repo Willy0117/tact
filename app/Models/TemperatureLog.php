@@ -13,6 +13,8 @@ class TemperatureLog extends Model {
         'operator_id',
         'menu_id',
         'sensor_id',
+        'process_id',
+        'note',
         'temperatures', // ← 修正後の項目
     ];
 
@@ -45,6 +47,13 @@ class TemperatureLog extends Model {
     {
         return $this->belongsTo(Sensor::class);
     }
+
+    // TemperatureLog.php
+    public function process()
+    {
+        return $this->belongsTo(Process::class);
+    }
+
 }
 
 
