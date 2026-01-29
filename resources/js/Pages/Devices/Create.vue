@@ -22,7 +22,18 @@
           <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
           <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
         </div>
-       <div>
+       <!-- Tenant 選択 (Super Admin のみ) -->
+        <div v-if="isSuperAdmin" class="mt-4">
+          <label class="block mb-1">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
+            </option>
+          </select>
+        </div>
+
+        <div>
           <label class="block">{{ t('process') }}</label>
           <select v-model="form.process_id" class="mt-1 block w-full">
             <option value="">{{ t('please_select') }}</option>
@@ -87,16 +98,7 @@
 
         </div>
 
-       <!-- Tenant 選択 (Super Admin のみ) -->
-        <div v-if="isSuperAdmin" class="mt-4">
-          <label class="block mb-1">{{ t('tenant') }}</label>
-          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
-            <option :value="null">{{ t('select_tenant') }}</option>
-            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.name }}
-            </option>
-          </select>
-        </div>
+
 
         <div>
           <label class="block">{{ t('display_order') }}</label>
@@ -126,6 +128,7 @@ import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 const { t } = useI18n()
+
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
@@ -140,7 +143,7 @@ const props = defineProps({
   mode: { type: String, default: '' }
 })
 
-const processes = props.processes
+const processes = ref([...props.processes])
 
 const form = reactive({
   code: props.device?.code ?? '',
@@ -149,10 +152,39 @@ const form = reactive({
   measurement: props.device?.measurement ?? 1,
   disabled: props.device?.disabled ?? 1,
   display_order: props.device?.display_order ?? 1,
-  tenant_id: props.device
-  ? props.device.tenant_id
-  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
+  tenant_id: props.device?.tenant_id
+    ?? (isSuperAdmin.value ? 1 : props.user.tenant_id),
 })
+
+watch(
+  () => form.tenant_id,
+  async (tenantId) => {
+    form.process_id = null
+
+    // 初期ロード時 & tenant が同じなら props を使う
+    if (tenantId && props.processes.length && tenantId === props.initialTenantId) {
+      processes.value = [...props.processes]
+      return
+    }
+
+    if (!tenantId) {
+      processes.value = []
+      return
+    }
+
+    const res = await axios.get(
+      route('processes.byTenant'),
+      {
+        params: {
+          tenant: tenantId,
+        },
+      }
+    )
+    console.log(res.data)  
+    processes.value = res.data
+  },
+  { immediate: true }
+)
 
 // リアルタイム重複チェック
 const errors = reactive({ code: '', name: '', process: '', measurement: '', disabled: '', display_order: '' })

@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/operators/autocomplete', [\App\Http\Controllers\OperatorController::class, 'autocomplete']);
     Route::get('/processes/autocomplete', [\App\Http\Controllers\ProcessController::class, 'autocomplete']);
 
+    Route::get('/processes/by-tenant', [\App\Http\Controllers\ProcessController::class, 'byTenant'])->name('processes.byTenant');
+
     // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');

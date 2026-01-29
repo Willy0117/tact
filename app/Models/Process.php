@@ -11,5 +11,16 @@ class Process extends Model
 
     protected $fillable = [
         'name',
+        'threshold_value',
+        'threshold_type',
+        'display_order',
+        'disabled',
+        'tenant_id',
     ];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
 }

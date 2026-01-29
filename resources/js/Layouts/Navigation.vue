@@ -15,9 +15,19 @@ import {
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
   CubeIcon,
-  BeakerIcon,
+  BeakerIcon,Bars3Icon, XMarkIcon,
   ShieldCheckIcon, // ← 追加
 } from '@heroicons/vue/24/outline'
+
+const page = usePage()
+
+const mobileOpen = ref(false)       // モバイル用の開閉状態
+
+const collapsed = ref(false)
+const openSubMenu = ref(null)
+
+const toggleCollapse = () => (collapsed.value = !collapsed.value)
+const toggleSubMenu = (menu) => (openSubMenu.value = openSubMenu.value === menu ? null : menu)
 
 const { props } = usePage()
 console.log(props)
@@ -30,30 +40,39 @@ const hasApiFeatures = props.jetstream.hasApiFeatures
 const hasTeamFeatures = props.jetstream.hasTeamFeatures
 const canCreateTeams = props.jetstream.canCreateTeams
 
-// サイドバー状態
-const collapsed = ref(JSON.parse(localStorage.getItem('sidebar-collapsed') ?? 'false'))
-const openSubMenu = ref(null)
-
 const { t, locale } = useI18n()
 
 // レスポンシブ判定
-const isMobile = ref(false)
+/*const isMobile = ref(false)
 const handleResize = () => { isMobile.value = window.innerWidth < 1024 }
+
 onMounted(() => {
   handleResize()
   window.addEventListener('resize', handleResize)
 })
 onBeforeUnmount(() => window.removeEventListener('resize', handleResize))
-
-// トグル
-const toggleCollapse = () => { if (!isMobile.value) collapsed.value = !collapsed.value }
-const toggleSubMenu = (name) => { openSubMenu.value = openSubMenu.value === name ? null : name }
-
+*/
 // ページ遷移でサブメニュー閉じる
-watch(() => router.page, () => { openSubMenu.value = null })
+//watch(() => router.page, () => { openSubMenu.value = null })
 
 // collapsed 状態保存
-watch(collapsed, val => { localStorage.setItem('sidebar-collapsed', JSON.stringify(val)) })
+//watch(collapsed, val => { localStorage.setItem('sidebar-collapsed', JSON.stringify(val)) })
+
+// ページURLに応じて初期サブメニューを決定
+onMounted(() => {
+  if (page.url.startsWith('/menus') || page.url.startsWith('/menus/weekly') || page.url.startsWith('/menus/import')) {
+    openSubMenu.value = 'menus'
+  }
+  if (page.url.startsWith('/tenants') || page.url.startsWith('/roles') || page.url.startsWith('/permissions')) {
+    openSubMenu.value = 'access'
+  }
+  if (page.url.startsWith('/devices') || page.url.startsWith('/operators') || page.url.startsWith('/sensors') || page.url.startsWith('/processes') ) {
+    openSubMenu.value = 'masters'
+  }
+  if (page.url.startsWith('/users')) {
+    openSubMenu.value = 'users'
+  }
+})
 
 // ヘッダー操作
 const logout = () => { router.post(route('logout')) }
@@ -110,265 +129,276 @@ const showAccessControl = computed(() => {
 })
 </script>
 
-
 <template>
-  <div class="flex min-h-screen bg-gray-100 text-sm">
+  <div class="flex">
+    <!-- モバイル用ハンバーガー -->
+    <button
+      @click="mobileOpen = !mobileOpen"
+      class="lg:hidden p-2 rounded-full hover:bg-gray-200"
+    >
+      <template v-if="mobileOpen">
+        <XMarkIcon class="w-5 h-5 text-gray-600" />
+      </template>
+      <template v-else>
+        <Bars3Icon class="w-5 h-5 text-gray-600" />
+      </template>
+    </button>
 
     <!-- サイドバー -->
-    <aside v-if="!isMobile" :class="['bg-gray-50 text-gray-800 shadow-lg h-full flex flex-col transition-all duration-300 z-50 overflow-hidden', collapsed ? 'w-16' : 'w-64']">
-      <div class="flex justify-end p-2">
-        <button @click="toggleCollapse" class="text-gray-500 hover:text-gray-700">
-          <span v-if="collapsed">➡</span>
-          <span v-else>⬅</span>
+    <aside
+      :class="[
+        'bg-gray-100 h-screen flex flex-col transition-all duration-300 z-50',
+        collapsed ? 'w-16' : 'w-64',
+        mobileOpen ? 'left-0' : '-left-full',
+        'fixed top-0 lg:relative lg:left-0 h-screen'
+      ]"
+    >
+      <!-- PC折りたたみボタン -->
+      <div class="flex justify-end p-2 flex-none lg:flex">
+        <button
+          @click="toggleCollapse"
+          class="p-2 rounded-full hover:bg-gray-200"
+        >
+          <template v-if="collapsed">
+            <Bars3Icon class="w-5 h-5 text-gray-600" />
+          </template>
+          <template v-else>
+            <XMarkIcon class="w-5 h-5 text-gray-600" />
+          </template>
         </button>
       </div>
 
-      <nav class="flex-1 px-2 py-4">
-        <!-- Dashboard -->
-        <Link :href="route('dashboard')"
-              class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
-              :class="isActive('dashboard') ? 'bg-gray-300 font-semibold' : ''">
-          <HomeIcon class="w-5 h-5"/>
-          <span v-if="!collapsed" class="ml-2">{{ t('dashboard') }}</span>
-        </Link>
-        <Link :href="route('temperatures.index')"
-              class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
-              :class="isActive('temperatures.index') ? 'bg-gray-300 font-semibold' : ''">
-          <CubeIcon class="w-5 h-5"/>
-          <span v-if="!collapsed" class="ml-2">{{ t('temperatures') }}</span>
-        </Link>        
-        <!-- 献立関連メニュー -->
-        <button @click="toggleSubMenu('menus')"
-                class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+       <nav class="flex-1 overflow-y-auto px-2 py-4 text-sm">
+      <!-- Dashboard -->
+      <Link :href="route('dashboard')"
+            class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
+            :class="isActive('dashboard') ? 'bg-gray-300 font-semibold' : ''">
+        <HomeIcon class="w-5 h-5"/>
+        <span v-if="!collapsed" class="ml-2">{{ t('dashboard') }}</span>
+      </Link>
+      <Link :href="route('temperatures.index')"
+            class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
+            :class="isActive('temperatures.index') ? 'bg-gray-300 font-semibold' : ''">
+        <CubeIcon class="w-5 h-5"/>
+        <span v-if="!collapsed" class="ml-2">{{ t('temperatures') }}</span>
+      </Link>        
+      <!-- 献立関連メニュー -->
+      <button @click="toggleSubMenu('menus')"
+              class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+        <div class="flex items-center">
+          <CubeIcon class="w-5 h-5"/> <!-- 適宜アイコン変更 -->
+          <span v-if="!collapsed" class="ml-2">{{ t('menus') }}</span>
+        </div>
+        <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='menus'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+      <transition name="slide-fade">
+        <div v-show="openSubMenu==='menus' && !collapsed" class="pl-6 mt-1 space-y-1">
+          <Link :href="route('menus.index')"
+                class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                :class="isActive('menus.index') ? 'bg-gray-200 font-semibold' : ''">
+            <CubeIcon class="w-4 h-4 mr-1"/>
+            {{ t('menu_list') }}
+          </Link>
+
+          <Link :href="route('menus.weekly')"
+                class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                :class="isActive('menus.weekly') ? 'bg-gray-200 font-semibold' : ''">
+            <CubeIcon class="w-4 h-4 mr-1"/>
+            {{ t('weekly_menu') }}
+          </Link>
+          
+          <Link :href="route('menus.import')"
+                class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                :class="isActive('menus.import') ? 'bg-gray-200 font-semibold' : ''">
+            <ArrowRightOnRectangleIcon class="w-4 h-4 mr-1"/>
+            {{ t('excel_menu_import') }}
+          </Link>
+        </div>
+      </transition>        
+      <!-- Profile サブメニュー -->
+      <div class="mt-2">
+        <button @click="toggleSubMenu('profile')"
+                class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors">
           <div class="flex items-center">
-            <CubeIcon class="w-5 h-5"/> <!-- 適宜アイコン変更 -->
-            <span v-if="!collapsed" class="ml-2">{{ t('menus') }}</span>
+            <UserIcon class="w-5 h-5"/>
+            <span v-if="!collapsed" class="ml-2">{{ t('profile') }}</span>
           </div>
-          <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='menus'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='profile'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
         <transition name="slide-fade">
-          <div v-show="openSubMenu==='menus' && !collapsed" class="pl-6 mt-1 space-y-1">
-            <Link :href="route('menus.index')"
+          <div v-show="openSubMenu==='profile' && !collapsed" class="pl-6 mt-1 space-y-1">
+            <Link :href="route('profile.show')"
                   class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                  :class="isActive('menus.index') ? 'bg-gray-200 font-semibold' : ''">
-              <CubeIcon class="w-4 h-4 mr-1"/>
-              {{ t('menu_list') }}
+                  :class="isActive('profile.show') ? 'bg-gray-200 font-semibold' : ''">
+              <UserIcon class="w-4 h-4 mr-1"/>
+              Profile Settings
             </Link>
-
-            <Link :href="route('menus.weekly')"
+            <Link v-if="hasApiFeatures" :href="route('api-tokens.index')"
                   class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                  :class="isActive('menus.weekly') ? 'bg-gray-200 font-semibold' : ''">
-              <CubeIcon class="w-4 h-4 mr-1"/>
-              {{ t('weekly_menu') }}
+                  :class="isActive('api-tokens.index') ? 'bg-gray-200 font-semibold' : ''">
+              <ServerIcon class="w-4 h-4 mr-1"/>
+              API Tokens
             </Link>
-            
-            <Link :href="route('menus.import')"
-                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                  :class="isActive('menus.import') ? 'bg-gray-200 font-semibold' : ''">
+            <!--button @click="logout" class="flex items-center w-full text-left py-2 px-2 rounded hover:bg-gray-100">
               <ArrowRightOnRectangleIcon class="w-4 h-4 mr-1"/>
-              {{ t('excel_menu_import') }}
+              Log Out
+            </button -->
+          </div>
+        </transition>
+        <!-- Access Control -->
+        <template v-if="showAccessControl">
+          <button @click="toggleSubMenu('access')"
+                  class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+            <div class="flex items-center">
+              <ShieldCheckIcon class="w-5 h-5"/>
+              <span v-if="!collapsed" class="ml-2">{{ t('access_control') }}</span>
+            </div>
+            <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='access'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <transition name="slide-fade">
+            <div v-show="openSubMenu==='access' && !collapsed" class="pl-6 mt-1 space-y-1">
+              <Link
+                v-if="can('manage tenants')"
+                :href="route('tenants.index')"
+                class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                :class="isActive('tenants.index') ? 'bg-gray-200 font-semibold' : ''"
+              >
+                <BuildingOfficeIcon class="w-4 h-4 mr-1"/>
+                {{ t('tenants') }}
+              </Link>
+
+              <Link
+                v-if="can('manage roles')"
+                :href="route('roles.index')"
+                class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                :class="isActive('roles.index') ? 'bg-gray-200 font-semibold' : ''"
+              >
+                <UsersIcon class="w-4 h-4 mr-1"/>
+                {{ t('roles') }}
+              </Link>
+
+              <Link
+                v-if="can('manage permissions')"
+                :href="route('permissions.index')"
+                class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                :class="isActive('permissions.index') ? 'bg-gray-200 font-semibold' : ''"
+              >
+                <TicketIcon class="w-4 h-4 mr-1"/>
+                {{ t('permissions') }}
+              </Link>
+            </div>
+          </transition>
+        </template>
+        <!-- ここからマスター系メニュー -->
+
+        <button @click="toggleSubMenu('masters')"
+                class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+          <div class="flex items-center">
+            <Cog6ToothIcon class="w-5 h-5"/>
+            <span v-if="!collapsed" class="ml-2">{{ t('masters') }}</span>
+          </div>
+          <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='masters'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <transition name="slide-fade">
+          <div v-show="openSubMenu==='masters' && !collapsed" class="pl-6 mt-1 space-y-1">
+            <Link :href="route('devices.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('devices.index') ? 'bg-gray-200 font-semibold' : ''">
+              <CubeIcon class="w-4 h-4 mr-1"/>
+              {{ t('devices') }}
+            </Link>
+
+            <Link :href="route('operators.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('operators.index') ? 'bg-gray-200 font-semibold' : ''">
+              <UsersIcon class="w-4 h-4 mr-1"/>
+              {{ t('operators') }}
+            </Link>
+
+            <Link :href="route('sensors.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('sensors.index') ? 'bg-gray-200 font-semibold' : ''">
+              <BeakerIcon class="w-4 h-4 mr-1"/>
+              {{ t('sensors') }}
+            </Link>
+            <Link :href="route('processes.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('processes.index') ? 'bg-gray-200 font-semibold' : ''">
+              <BeakerIcon class="w-4 h-4 mr-1"/>
+              {{ t('process') }}
             </Link>
           </div>
-        </transition>        
-        <!-- Profile サブメニュー -->
-        <div class="mt-2">
-          <button @click="toggleSubMenu('profile')"
-                  class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors">
-            <div class="flex items-center">
-              <UserIcon class="w-5 h-5"/>
-              <span v-if="!collapsed" class="ml-2">{{ t('profile') }}</span>
-            </div>
-            <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='profile'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <transition name="slide-fade">
-            <div v-show="openSubMenu==='profile' && !collapsed" class="pl-6 mt-1 space-y-1">
-              <Link :href="route('profile.show')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('profile.show') ? 'bg-gray-200 font-semibold' : ''">
-                <UserIcon class="w-4 h-4 mr-1"/>
-                Profile Settings
-              </Link>
-              <Link v-if="hasApiFeatures" :href="route('api-tokens.index')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('api-tokens.index') ? 'bg-gray-200 font-semibold' : ''">
-                <ServerIcon class="w-4 h-4 mr-1"/>
-                API Tokens
-              </Link>
-              <!--button @click="logout" class="flex items-center w-full text-left py-2 px-2 rounded hover:bg-gray-100">
-                <ArrowRightOnRectangleIcon class="w-4 h-4 mr-1"/>
-                Log Out
-              </button -->
-            </div>
-          </transition>
-          <!-- Access Control -->
-          <template v-if="showAccessControl">
-            <button @click="toggleSubMenu('access')"
-                    class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
-              <div class="flex items-center">
-                <ShieldCheckIcon class="w-5 h-5"/>
-                <span v-if="!collapsed" class="ml-2">{{ t('access_control') }}</span>
-              </div>
-              <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='access'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-
-            <transition name="slide-fade">
-              <div v-show="openSubMenu==='access' && !collapsed" class="pl-6 mt-1 space-y-1">
-                <Link
-                  v-if="can('manage tenants')"
-                  :href="route('tenants.index')"
-                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                  :class="isActive('tenants.index') ? 'bg-gray-200 font-semibold' : ''"
-                >
-                  <BuildingOfficeIcon class="w-4 h-4 mr-1"/>
-                  {{ t('tenants') }}
-                </Link>
-
-                <Link
-                  v-if="can('manage roles')"
-                  :href="route('roles.index')"
-                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                  :class="isActive('roles.index') ? 'bg-gray-200 font-semibold' : ''"
-                >
-                  <UsersIcon class="w-4 h-4 mr-1"/>
-                  {{ t('roles') }}
-                </Link>
-
-                <Link
-                  v-if="can('manage permissions')"
-                  :href="route('permissions.index')"
-                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                  :class="isActive('permissions.index') ? 'bg-gray-200 font-semibold' : ''"
-                >
-                  <TicketIcon class="w-4 h-4 mr-1"/>
-                  {{ t('permissions') }}
-                </Link>
-              </div>
-            </transition>
-          </template>
-          <!-- ここからマスター系メニュー -->
-
-          <button @click="toggleSubMenu('masters')"
-                  class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
-            <div class="flex items-center">
-              <Cog6ToothIcon class="w-5 h-5"/>
-              <span v-if="!collapsed" class="ml-2">{{ t('masters') }}</span>
-            </div>
-            <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='masters'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <transition name="slide-fade">
-            <div v-show="openSubMenu==='masters' && !collapsed" class="pl-6 mt-1 space-y-1">
-              <Link :href="route('devices.index')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('devices.index') ? 'bg-gray-200 font-semibold' : ''">
-                <CubeIcon class="w-4 h-4 mr-1"/>
-                {{ t('devices') }}
-              </Link>
-
-              <Link :href="route('operators.index')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('operators.index') ? 'bg-gray-200 font-semibold' : ''">
-                <UsersIcon class="w-4 h-4 mr-1"/>
-                {{ t('operators') }}
-              </Link>
-
-              <Link :href="route('sensors.index')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('sensors.index') ? 'bg-gray-200 font-semibold' : ''">
-                <BeakerIcon class="w-4 h-4 mr-1"/>
-                {{ t('sensors') }}
-              </Link>
-              <Link :href="route('processes.index')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('processes.index') ? 'bg-gray-200 font-semibold' : ''">
-                <BeakerIcon class="w-4 h-4 mr-1"/>
-                {{ t('processes') }}
-              </Link>
-            </div>
-          </transition>          
-        </div>
-        <!-- ここからユーザーメニュー（マスターとは独立） -->
-        <div>
-          <button @click="toggleSubMenu('users')"
-                  class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
-            <div class="flex items-center">
-              <UsersIcon class="w-5 h-5"/>
-              <span v-if="!collapsed" class="ml-2">{{ t('user') }}</span>
-            </div>
-            <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='users'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-
-          <transition name="slide-fade">
-            <div v-show="openSubMenu==='users' && !collapsed" class="pl-6 mt-1 space-y-1">
-              <Link :href="route('users.index')"
-                    class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
-                    :class="isActive('users.index') ? 'bg-gray-200 font-semibold' : ''">
-                <UserIcon class="w-4 h-4 mr-1"/>
-                {{ t('user') }}
-              </Link>
-            </div>
-          </transition>
-        </div>
-        <!-- Teams -->
-        <div v-if="hasTeamFeatures" class="mt-4 border-t border-gray-200 pt-2 text-xs text-gray-400 px-2">Manage Team</div>
-        <div v-if="hasTeamFeatures" class="mt-1 space-y-1">
-          <Link :href="route('teams.show', currentTeam)"
-                class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
-                :class="isActive('teams.show') ? 'bg-gray-300 font-semibold' : ''">
+        </transition>          
+      </div>
+      <!-- ここからユーザーメニュー（マスターとは独立） -->
+      <div>
+        <button @click="toggleSubMenu('users')"
+                class="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors mt-2">
+          <div class="flex items-center">
             <UsersIcon class="w-5 h-5"/>
-            <span v-if="!collapsed" class="ml-2">Team Settings</span>
-          </Link>
-          <Link v-if="canCreateTeams" :href="route('teams.create')"
-                class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
-                :class="isActive('teams.create') ? 'bg-gray-300 font-semibold' : ''">
-            <PlusIcon class="w-5 h-5"/>
-            <span v-if="!collapsed" class="ml-2">Create Team</span>
-          </Link>
-          <div v-for="team in allTeams" :key="team.id">
-            <form @submit.prevent="switchTeam(team)">
-              <button type="submit" class="flex items-center w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors">
-                <svg v-if="team.id===currentTeamId" class="w-4 h-4 mr-2 text-green-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                </svg>
-                <span v-if="!collapsed">{{ team.name }}</span>
-              </button>
-            </form>
+            <span v-if="!collapsed" class="ml-2">{{ t('user') }}</span>
           </div>
+          <svg v-if="!collapsed" :class="{'rotate-90': openSubMenu==='users'}" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <transition name="slide-fade">
+          <div v-show="openSubMenu==='users' && !collapsed" class="pl-6 mt-1 space-y-1">
+            <Link :href="route('users.index')"
+                  class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
+                  :class="isActive('users.index') ? 'bg-gray-200 font-semibold' : ''">
+              <UserIcon class="w-4 h-4 mr-1"/>
+              {{ t('user') }}
+            </Link>
+          </div>
+        </transition>
+      </div>
+      <!-- Teams -->
+      <div v-if="hasTeamFeatures" class="mt-4 border-t border-gray-200 pt-2 text-xs text-gray-400 px-2">Manage Team</div>
+      <div v-if="hasTeamFeatures" class="mt-1 space-y-1">
+        <Link :href="route('teams.show', currentTeam)"
+              class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
+              :class="isActive('teams.show') ? 'bg-gray-300 font-semibold' : ''">
+          <UsersIcon class="w-5 h-5"/>
+          <span v-if="!collapsed" class="ml-2">Team Settings</span>
+        </Link>
+        <Link v-if="canCreateTeams" :href="route('teams.create')"
+              class="flex items-center py-2 px-2 rounded hover:bg-gray-200 transition-colors"
+              :class="isActive('teams.create') ? 'bg-gray-300 font-semibold' : ''">
+          <PlusIcon class="w-5 h-5"/>
+          <span v-if="!collapsed" class="ml-2">Create Team</span>
+        </Link>
+        <div v-for="team in allTeams" :key="team.id">
+          <form @submit.prevent="switchTeam(team)">
+            <button type="submit" class="flex items-center w-full py-2 px-2 rounded hover:bg-gray-200 transition-colors">
+              <svg v-if="team.id===currentTeamId" class="w-4 h-4 mr-2 text-green-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span v-if="!collapsed">{{ team.name }}</span>
+            </button>
+          </form>
         </div>
+      </div>
 
-      </nav>
-    </aside>
-
-    <!-- メイン -->
-    <div class="flex-1 flex flex-col">
-      <header class="bg-white shadow flex items-center justify-between px-4 h-16">
-        <h1 class="text-lg font-semibold">{{ props.app?.name }}</h1>
-
-        <div class="flex items-center space-x-2">
-          <button v-if="isMobile" class="lg:hidden p-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-          </button>
-          <!-- button @click="logout" class="p-2 text-gray-700 hover:text-gray-900">Logout</button -->
-        </div>
-      </header>
-
-      <main class="p-4">
-        <slot />
-      </main>
-    </div>
+    </nav>
+  </aside>
+      <!-- モバイルオーバーレイ -->
+  <div
+    v-if="mobileOpen"
+    class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+    @click="mobileOpen = false"
+  ></div>
   </div>
-
   <style>
     .slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.2s ease; }
     .slide-fade-enter-from, .slide-fade-leave-to { opacity: 0; max-height: 0; }

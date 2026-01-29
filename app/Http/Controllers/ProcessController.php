@@ -6,7 +6,8 @@ use App\Models\Process;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
-use App\Models\User; // ← これを追加！
+use App\Models\User; 
+use App\Models\Tenant;
 
 class ProcessController extends Controller
 {
@@ -26,23 +27,29 @@ class ProcessController extends Controller
         }
 
         // ソート
-        $sortBy = $request->input('sort_by', 'id');
+        $sortBy = $request->input('sort_by', 'display_order');
         $sortDir = $request->input('sort_dir', 'asc');
         $query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
         $perPage = intval($request->input('per_page', 20));
 
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
         $processes = Process::query()
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
-            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
+            ->orderBy($request->sort_by ?? 'display_order', $request->sort_dir ?? 'asc')
             ->paginate($perPage)
             ->withQueryString(); // 検索条件をページリンクに保持
 
 
         return Inertia::render('Processes/Index', [
             'processes' => $processes,
+            'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
             'filters' => $request->only(['name','per_page','sort_by','sort_dir']),
         ]);
@@ -60,10 +67,14 @@ class ProcessController extends Controller
             $process = Process::find($process_id);
         }
 
-        return Inertia::render('Processes/Create', [
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+
+        return Inertia::render('Processes/Edit', [
             'filters' => $request->only(['name','per_page','sort_by','sort_dir','page']),
             'process' => $process, // コピー元のデータを渡す
+            'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
+            'mode' => $process ? 'copy' : 'create',
         ]);
     }
 
@@ -71,11 +82,36 @@ class ProcessController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string'],
-        ], [
-            'name.required' => __('validation.required', ['attribute' => __('Name')]),
-        ]);
+        $validated = $request->validate(
+            [
+                'name' => ['required', 'string'],
+                'threshold_type' => ['required', 'in:upper,lower,none'],
+                'threshold_value' => [
+                    'nullable',
+                    'numeric',
+                    'between:-50,150',
+                    'required_unless:threshold_type,none',
+                ],
+
+                'disabled' => ['required', 'boolean'],
+                'display_order' => ['required', 'integer'],
+                'tenant_id' => ['nullable', 'exists:tenants,id'], // 追加
+            ],
+            [],
+            [
+                'name' => __('processes.name'),
+                'threshold_type' => __('processes.threshold_type'),
+                'threshold_value' => __('processes.threshold_value'),
+            ]
+        );
+        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
+        $validated['tenant_id'] = $user->hasRole('Super Admin') 
+            ? $validated['tenant_id'] 
+            : $user->tenant_id;
+
+        if ($request->threshold_type === 'none') {
+            $validated['threshold_value'] = null;
+        }
 
         Process::create($validated);
 
@@ -87,9 +123,13 @@ class ProcessController extends Controller
     {
         $user = $request->user();
 
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+
         return Inertia::render('Processes/Edit', [
             'process' => $process,
-            'user' => $user, // Vue 側で判定に必要
+            'tenants' => $tenants,
+            'user' => $user,
+            'mode' => 'edit',
             'filters' => $request->only(['name','per_page','sort_by','sort_dir','page'])
         ]);
     }
@@ -98,11 +138,36 @@ class ProcessController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string'],
-        ], [
-            'name.required' => __('validation.required', ['attribute' => __('Name')]),
-        ]);
+        $validated = $request->validate(
+            [
+                'name' => ['required', 'string'],
+                'threshold_type' => ['required', 'in:upper,lower,none'],
+                'threshold_value' => [
+                    'nullable',
+                    'numeric',
+                    'between:-50,150',
+                    'required_unless:threshold_type,none',
+                ],
+
+                'disabled' => ['required', 'boolean'],
+                'display_order' => ['required', 'integer'],
+                'tenant_id' => ['nullable', 'exists:tenants,id'], // 追加
+            ],
+            [],
+            [
+                'name' => __('processes.name'),
+                'threshold_type' => __('processes.threshold_type'),
+                'threshold_value' => __('processes.threshold_value'),
+            ]
+        );
+        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
+        $validated['tenant_id'] = $user->hasRole('Super Admin') 
+            ? $validated['tenant_id'] 
+            : $user->tenant_id;
+
+        if ($request->threshold_type === 'none') {
+            $validated['threshold_value'] = null;
+        }
 
         $process->update($validated);
 
@@ -120,6 +185,18 @@ class ProcessController extends Controller
     {
         Process::whereIn('id', $request->ids)->delete();
         return redirect()->route('processes.index')->with('success', __('Selected processes have been deleted.'));
+    }
+
+    public function byTenant(Request $request)
+    {
+        $request->validate([
+            'tenant' => ['required', 'integer', 'exists:tenants,id'],
+        ]);
+
+        return Process::query()
+            ->where('tenant_id', $request->tenant)
+            ->orderBy('display_order')
+            ->get(['id', 'name']);
     }
 
     public function autocomplete(Request $request)

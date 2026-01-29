@@ -22,11 +22,8 @@
               <input
                 v-model="form.serving_date"
                 type="date"
-                class="border rounded px-3 py-2 w-full pr-10"
+                class="border rounded px-3 py-2 w-full"
               />
-              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
-                <CalendarIcon class="w-5 h-5" />
-              </span>
             </div>
           </div>
 
@@ -37,11 +34,8 @@
               <input
                 v-model="form.serving_time"
                 type="time"
-                class="border rounded px-3 py-2 w-full pr-10"
+                class="border rounded px-3 py-2 w-full"
               />
-              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
-                <ClockIcon class="w-5 h-5" />
-              </span>
             </div>
           </div>
 
@@ -52,11 +46,8 @@
               <input
                 v-model="form.cooking_date"
                 type="date"
-                class="border rounded px-3 py-2 w-full pr-10"
+                class="border rounded px-3 py-2 w-full"
               />
-              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
-                <CalendarIcon class="w-5 h-5" />
-              </span>
             </div>
           </div>
         </div>

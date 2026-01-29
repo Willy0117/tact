@@ -32,6 +32,13 @@
           </div>
 
           <div class="p-4 space-y-3">
+            <label class="block mb-1">{{ t('tenant') }}</label>
+            <select v-if="isSuperAdmin" v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+              <option value="">{{ t('please_select') }}</option>
+              <option v-for="t in tenants" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </option>
+            </select>
             <!-- 既存 form をそのまま利用 -->
             <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
 
@@ -82,16 +89,32 @@
       </div>
 
       <!-- センサー一覧テーブル -->
-      <table class="min-w-full table-auto border-collapse border border-gray-300">
+      <table class="min-w-full table-auto border-collapse border border-gray-300 text-sm">
         <thead>
           <tr class="bg-gray-200">
             <th class="px-3 py-2">
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
+            <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
+              <span v-if="form.sort_by==='tenant_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>  
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
-              <span v-if="form.sort==='name'">{{ form.name==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
+            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('threshold_type')">
+              {{ t('processes.threshold_type_label') }}
+              <span v-if="form.sort_by==='threshold_type'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>
+            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('threshold_value')">
+              {{ t('processes.threshold_value') }}
+              <span v-if="form.sort_by==='threshold_value'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>
+            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('display_order')">
+              {{ t('display_order') }}
+              <span v-if="form.sort_by==='display_order'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>
+            <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
@@ -102,8 +125,23 @@
             <td class="px-3 py-2">
               <input type="checkbox" :value="process.id" v-model="selectedIds" />
             </td>
+            <td v-if="isSuperAdmin">
+              {{ tenants.find(t => t.id === process.tenant_id)?.name || '-' }}
+            </td> 
             <td class="px-3 py-2">{{ process.name }}</td>
-            <td class="px-3 py-2">{{ process.created_at ? dayjs(process.created_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
+            <td class="px-3 py-2 text-center">
+              {{
+                process.threshold_type === 'upper'
+                  ? t('processes.threshold_type.upper')
+                  : process.threshold_type === 'lower'
+                    ? t('processes.threshold_type.lower')
+                    : t('processes.threshold_type.none')
+              }}
+            </td>
+            <td class="px-3 py-2 text-center">{{ process.threshold_value }}</td>
+            <td class="px-3 py-2 text-center">{{ process.display_order }}</td>
+            <td class="px-3 py-2 text-center">{{ process.disabled ? t('enable') : t('disable') }}</td>
+            <td class="px-3 py-2">{{ process.created_at ? dayjs(process.created_at).format('YYYY/MM/DD') : '' }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copyprocess(process.id)" class="text-green-500 hover:text-green-700">
                 <DocumentDuplicateIcon class="w-4 h-4" />
@@ -136,12 +174,13 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicate
 
 const props = defineProps({
   processes: Object,
+  tenants: Array,
   user: Object,   // ← これが必要  
   filters: {
     type: Object,
     default: () => ({
-      name: '',
-      per_page: 20, sort: 'id', direction: 'asc', page: 1
+      name: '',tenant_id: '',
+      per_page: 20, sort_by: 'id', sort_dir: 'asc', page: 1
     })
   }
 })
@@ -157,8 +196,10 @@ const openDrawer = ref(false)
 // 複数検索用に reactive 拡張
 const form = reactive({
   name: props.filters.name,
+  tenant_id: props.filters.tenant_id,
   per_page: props.filters.per_page || 20,
-  sort: props.filters.sort,
+  sort_by: props.filters.sort_by,
+  sort_dir: props.filters.sort_dir,
 })
 // 選択削除
 const selectedIds = ref([])
@@ -185,9 +226,10 @@ watch(() => props.processes.current_page, () => {
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
   name: form.name,
+  tenant_id: form.tenant_id,
   per_page: form.per_page,
-  sort_by: form.sort,
-  sort_dir: form.direction,
+  sort_by: form.sort_by,
+  sort_dir: form.sort_dir,
   page: props.processes.current_page
 })
 
@@ -210,8 +252,8 @@ const goPage = (page) => {
 
 // 列ヘッダクリックでソート
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by = field; form.sort_dir = 'asc' }
   submitSearch()
 }
 

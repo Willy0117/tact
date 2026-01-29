@@ -109,23 +109,26 @@
             <th v-if="isSuperAdmin">{{ t('tenant') }}</th>            
             <!--th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
-              <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='code'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th -->
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
-              <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('process_id')">
               {{ t('process') }}
-              <span v-if="form.sort==='process_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='process_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('measurement')">
               {{ t('measurement') }}
-              <span v-if="form.sort==='measurement'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='measurement'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
-            <th class="px-3 py-2 text-center">{{ t('display_order') }}</th>
+            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('display_order')">
+              {{ t('display_order') }}
+              <span v-if="form.sort_by==='display_order'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
@@ -184,7 +187,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       code: '', name: '', process_id: '', measurement: '', tenant_id: '',
-      per_page: 20, sort: 'id', direction: 'asc', page: 1
+      per_page: 20, sort_by: 'display_order', sort_dir: 'desc', page: 1
     })
   }
 })
@@ -195,7 +198,7 @@ const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
 
-// 検索フォーム・per_page・sort・directionを reactive で管理
+// 検索フォーム・per_page・sort_by・sort_dirを reactive で管理
 const openDrawer = ref(false)
 
 // 複数検索用に reactive 拡張
@@ -206,8 +209,8 @@ const form = reactive({
   tenant_id: props.filters.tenant_id,
   measurement: props.filters.measurement,
   per_page: props.filters.per_page || 20,
-  sort: props.filters.sort,
-  direction: props.filters.direction  
+  sort_by: props.filters.sort_by,
+  sort_dir: props.filters.sort_dir  
 })
 // 選択削除
 const selectedIds = ref([])
@@ -239,8 +242,8 @@ const persistQuery = () => ({
   process_id: form.process_id,
   measurement: form.measurement,
   per_page: form.per_page,
-  sort_by: form.sort,
-  sort_dir: form.direction,
+  sort_by: form.sort_by,
+  sort_dir: form.sort_dir,
   page: props.devices.current_page
 })
 
@@ -264,8 +267,8 @@ const goPage = (page) => {
 
 // 列ヘッダクリックでソート
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by = field; form.sort_dir = 'desc' }
   submitSearch()
 }
 

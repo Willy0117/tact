@@ -44,7 +44,8 @@ class DeviceController extends Controller
         // ページあたり件数
         $perPage = intval($request->input('per_page', 20));
 
-        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];     
+                        
         $processes = Process::all(['id', 'name']);
 
         $devices = $query
@@ -85,7 +86,11 @@ class DeviceController extends Controller
             $device = Device::find($device_id);
         }
         // process 選択肢を取得
-        $processes = Process::all(['id', 'name']);
+        $processes = Process::query()
+            ->when($request->filled('tenant_id'), function ($q) use ($request) {
+                $q->where('tenant_id', $request->tenant_id);
+            })
+            ->get(['id', 'name']);
 
         return Inertia::render('Devices/Create', [
             'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']),
@@ -128,9 +133,14 @@ class DeviceController extends Controller
     public function edit(Request $request, Device $device)
     {
         $user = $request->user();
+        
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
         // process 選択肢を取得
-        $processes = Process::all(['id', 'name']);
+        $processes = Process::query()
+            ->when($request->filled('tenant_id'), function ($q) use ($request) {
+                $q->where('tenant_id', $request->tenant_id);
+            })
+            ->get(['id', 'name']);
 
         return Inertia::render('Devices/Edit', [
             'device' => $device,

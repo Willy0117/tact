@@ -106,19 +106,22 @@
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
             <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
-              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='tenant_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>            
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
-              <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='code'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
-              <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
-            <th class="px-3 py-2 text-center">{{ t('display_order') }}</th>
+            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('display_order')">
+              {{ t('display_order') }}
+              <span v-if="form.sort_by==='display_order'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
@@ -174,7 +177,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       code: '', name: '', tenant: '',
-      per_page: 20, sort: 'id', direction: 'asc', page: 1
+      per_page: 20, sort_by: 'id', sort_dir: 'desc', page: 1
     })
   }
 })
@@ -184,7 +187,7 @@ const { t } = useI18n()
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
-// 検索フォーム・per_page・sort・directionを reactive で管理
+// 検索フォーム・per_page・sort・sort_dirを reactive で管理
 const openDrawer = ref(false)
 
 // 複数検索用に reactive 拡張
@@ -193,7 +196,8 @@ const form = reactive({
   code: props.filters.code,
   name: props.filters.name,
   per_page: props.filters.per_page || 20,
-  sort: props.filters.sort,
+  sort_by: props.filters.sort_by,
+  sort_dir: props.filters.sort_dir,
 })
 // 選択削除
 const selectedIds = ref([])
@@ -223,8 +227,8 @@ const persistQuery = () => ({
   code: form.code,
   name: form.name,
   per_page: form.per_page,
-  sort_by: form.sort,
-  sort_dir: form.direction,
+  sort_by: form.sort_by,
+  sort_dir: form.sort_dir,
   page: props.operators.current_page
 })
 
@@ -247,8 +251,8 @@ const goPage = (page) => {
 
 // 列ヘッダクリックでソート
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by = field; form.sort_dir = 'desc' }
   submitSearch()
 }
 

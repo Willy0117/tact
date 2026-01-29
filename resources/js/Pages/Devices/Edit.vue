@@ -24,16 +24,32 @@
           <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
           <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
         </div>
-
-        <!-- process -->
-       <div>
-          <label class="block">{{ t('process') }}</label>
-          <select v-model="form.process_id" class="mt-1 block w-full">
-            <option v-for="p in processes" :key="p.id" :value="p.id">
-              {{ p.name }}
+        <!-- Tenant 選択 (Super Admin のみ) -->
+        <div v-if="isSuperAdmin" class="mt-4">
+          <label class="block mb-1">{{ t('tenant') }}</label>
+          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
+            <option :value="null">{{ t('select_tenant') }}</option>
+            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name }}
             </option>
           </select>
         </div>
+
+        <!-- process -->
+        <div>
+          <label class="block">{{ t('process') }}</label>
+          <select v-model="form.process_id" class="mt-1 block w-full">
+            <option :value="null">{{ t('please_select') }}</option>
+            <option
+              v-for="p in processes"
+              :key="p.id"
+              :value="p.id"
+            >
+              {{ p?.name ?? '' }}
+            </option>
+          </select>
+        </div>
+
 
         <div>
           <label class="block">
@@ -89,16 +105,7 @@
           </label>
 
         </div>
-        <!-- Tenant 選択 (Super Admin のみ) -->
-        <div v-if="isSuperAdmin" class="mt-4">
-          <label class="block mb-1">{{ t('tenant') }}</label>
-          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
-            <option :value="null">{{ t('select_tenant') }}</option>
-            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.name }}
-            </option>
-          </select>
-        </div>
+
 
         <!-- Display Order -->
         <div class="mb-4">
@@ -134,62 +141,94 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, router } from '@inertiajs/vue3'
-import { ref, reactive, watch, computed } from 'vue'
+import { Link, router} from '@inertiajs/vue3'
+import { reactive, ref, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
-const props = defineProps({
-  device: Object,
-  tenants: Array,      // Super Admin のみ
-  user: Object,
-  processes: Array,
-  filters: Object
-})
-
 const { t } = useI18n()
+
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
 
-const processes = props.processes
+// Props に mode と device_id を追加
+const props = defineProps({
+  filters: Object,
+  tenants: Array,      // Super Admin のみ
+  device: Object,
+  user: Object, 
+  processes: Array,
+  mode: { type: String, default: '' }
+})
+
+const processes = ref([...props.processes])
 
 const form = reactive({
-  code: props.device.code,
-  name: props.device.name,
-  process_id: props.device.process_id,
-  measurement: props.device?.measurement ?? 0, // 0/1
-  disabled: props.device?.disabled ?? 1,       // 0/1
-  display_order: props.device.display_order,
-  tenant_id: props.device?.tenant_id 
-  ?? (isSuperAdmin.value ? null : props.user?.tenant_id ?? null)
+  code: props.device?.code ?? '',
+  name: props.device?.name ?? '',
+  process_id: props.device?.process_id ?? '',
+  measurement: props.device?.measurement ?? 1,
+  disabled: props.device?.disabled ?? 1,
+  display_order: props.device?.display_order ?? 1,
+  tenant_id: props.device?.tenant_id
+    ?? (isSuperAdmin.value ? 1 : props.user.tenant_id),
 })
 
-const errors = reactive({
-  code: '',
-  name: '',
-  process: '',
-  measurement: '',
-})
+let initialLoad = true
 
-// リアルタイム重複チェック: code
-watch(() => form.code, async (newCode) => {
-  if (!newCode) { errors.code = ''; return }
-  try {
-    const response = await axios.post(
-      route('devices.checkCode'),
-      { code: newCode, id: props.device.id },
+watch(
+  () => form.tenant_id,
+  async (tenantId) => {
+
+    // 初期ロード時 & tenant が同じなら props を使う
+    if (tenantId && props.processes.length && tenantId === props.initialTenantId) {
+      processes.value = [...props.processes]
+      return
+    }
+
+    if (!tenantId) {
+      processes.value = []
+      return
+    }
+
+    const res = await axios.get(
+      route('processes.byTenant'),
       {
-        headers: {
-          Accept: 'application/json',
+        params: {
+          tenant: tenantId,
         },
       }
     )
+    console.log(res.data)  
+    processes.value = res.data
+     // tenant が変わった時だけ process_id をリセット
+    if (!initialLoad) {
+      form.process_id = null
+    } else {
+      initialLoad = false
+    }
+    
+  },
+  { immediate: true }
+)
+
+// リアルタイム重複チェック
+const errors = reactive({ code: '', name: '', process: '', measurement: '', disabled: '', display_order: '' })
+
+const checkCode = async (code) => {
+  if (!code) { errors.code = ''; return }
+  try {
+    const response = await axios.post(route('devices.checkCode'), { code })
     errors.code = response.data.exists ? t('code_already_exists') : ''
   } catch (e) {
     console.error(e)
   }
-})
+}
+
+// watch で入力中にもチェック
+watch(() => form.code, (newCode) => checkCode(newCode))
+
 // 全角→半角変換
 const toHalfWidth = (str) => {
   if (!str) return ''

@@ -12,7 +12,21 @@
   "create_new": "新規作成",
   "register": "ユーザー登録",
   "already registered?": "すでにアカウントをお持ちですか?",
-  "processes": "工程",
+  "processes": {
+    "title": "工程",
+    "list": "工程一覧",
+    "add": "工程追加",
+    "edit": "工程編集",
+    "copy": "工程コピー編集",
+    "threshold_value": "しきい値(温度°)",
+    "threshold_type_label": "判定条件",
+    "threshold_type": {
+      "upper": "以上",
+      "lower": "以下",
+      "none": "判定なし"     
+    }
+  },
+  "edit_process": "工程編集",
   "company_name": "会社名",
   "address": "住所",
   "phone": "電話",
@@ -115,7 +129,6 @@
   "disabled": "有効/無効",
   "enable": "有効",
   "disable": "無効",
-
   "admin": "管理者",
   "operator": "作業者",
   "device": "調理機器",

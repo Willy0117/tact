@@ -69,6 +69,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { ref, computed} from 'vue'
+import { router } from '@inertiajs/vue3'
+
 import { useI18n } from 'vue-i18n'
 import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
@@ -227,7 +229,8 @@ servingCols.forEach((col) => {
         const menuCell = sheet[`${col}${row}`];
         if (!menuCell || !menuCell.v) return;
 
-        const dishName = `${mealType} ${menuCell.v.toString().trim()}`;
+//        const dishName = `${mealType} ${menuCell.v.toString().trim()}`;
+        const dishName = `${menuCell.v.toString().trim()}`;
         const servingDate = servingDates[col];
         if (!servingDate) return;
 
@@ -281,10 +284,14 @@ async function saveMenus() {
         headers: { 'Content-Type': 'application/json' }
     })
     alert(res.data.message)
+    router.visit('/menus/import')
+
   } catch (e) {
     console.error(e)
     alert('保存に失敗しました')
+    router.visit('/menus/import')
   }
+
 }
 
 </script>

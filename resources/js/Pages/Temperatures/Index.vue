@@ -8,12 +8,12 @@
       <div class="grid grid-cols-5 gap-2 items-end">
           
           <!-- Menu Autocomplete -->
-          <!-- 12/27 削除　Autocomplete
+          <Autocomplete
             v-model="form.menu_id"
             :label="t('dish_name')"
             placeholder="Type dish name / serving date"
             fetch-url="/menus/autocomplete"
-          / -->
+          />
 
           <Autocomplete
             v-model="form.process_id"
@@ -145,10 +145,10 @@
               {{ t('sensor') }}
               <span v-if="form.sort_by==='sensor_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('handy_no')">
+            <!-- th class="px-3 py-2 cursor-pointer" @click="sortBy('handy_no')">
               {{ t('handy_no') }}
               <span v-if="form.sort_by==='handy_no'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
+            </th -->
             <th>
               {{ t('temperatures') }} (℃)
             </th>
@@ -174,7 +174,7 @@
             <td>{{ log.device ? log.device.name : '-' }}</td>
             <td>{{ log.operator ? log.operator.name : '-' }}</td>
             <td>{{ log.sensor ? log.sensor.name : '-' }}</td>
-            <td class="mr px-3 py-2">{{ log.handy_no }}</td>
+            <!-- td class="mr px-3 py-2">{{ log.handy_no }}</td -->
             <td>
               <ul class="temp-grid">
                 <li

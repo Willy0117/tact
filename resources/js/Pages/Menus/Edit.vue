@@ -18,11 +18,8 @@
               <input
                 v-model="form.serving_date"
                 type="date"
-                class="border rounded px-3 py-2 w-full pr-10"
+                class="border rounded px-3 py-2 w-full"
               />
-              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
-                <CalendarIcon class="w-5 h-5" />
-              </span>
             </div>
           </div>
 
@@ -33,11 +30,8 @@
               <input
                 v-model="form.serving_time"
                 type="time"
-                class="border rounded px-3 py-2 w-full pr-10"
+                class="border rounded px-3 py-2 w-full"
               />
-              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
-                <ClockIcon class="w-5 h-5" />
-              </span>
             </div>
           </div>
 
@@ -48,11 +42,8 @@
               <input
                 v-model="form.cooking_date"
                 type="date"
-                class="border rounded px-3 py-2 w-full pr-10"
+                class="border rounded px-3 py-2 w-full"
               />
-              <span class="absolute inset-y-0 right-2 flex items-center text-gray-400 pointer-events-none">
-                <CalendarIcon class="w-5 h-5" />
-              </span>
             </div>
           </div>
         </div>
@@ -107,6 +98,7 @@ const props = defineProps({
   menu: Object, // 編集対象
   redirect_to: String,
 })
+console.log(props)
 
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
@@ -115,15 +107,17 @@ const isSuperAdmin = computed(() =>
 const form = reactive({
   id: props.menu.id,
   dish_name: props.menu.dish_name,
-  serving_date: props.menu.serving_date ? props.menu.serving_date.slice(0, 10) : '',
+  serving_date: props.menu.serving_date,
   serving_time: props.menu.serving_time,
-  cooking_date: props.menu.cooking_date ? props.menu.cooking_date.slice(0, 10) : '',
+  cooking_date: props.menu.cooking_date,
   materials: props.menu.materials,
   tenant_id: props.menu
   ? props.menu.tenant_id
   : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null),
   redirect_to: props.redirect_to,
 })
+
+
 
 const errors = reactive({
   dish_name: '', serving_date: '', serving_time: '', cooking_date: '', materials: ''

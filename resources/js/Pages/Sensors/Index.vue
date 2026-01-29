@@ -97,27 +97,30 @@
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
             <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
-              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='tenant_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>             
             <!-- th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
-              <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='code'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th -->
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
-              <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('model')">
               {{ t('model') }}
-              <span v-if="form.sort==='model'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='model'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('serial_number')">
               {{ t('serial_number') }}
-              <span v-if="form.sort==='serial_number'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='serial_number'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
             <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
-            <th class="px-3 py-2 text-center">{{ t('display_order') }}</th>
+            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('display_order')">
+              {{ t('display_order') }}
+              <span v-if="form.sort_by==='display_order'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
+            </th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
@@ -175,7 +178,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       code: '', name: '', model: '', serial_number: '', tenant_id: '',
-      per_page: 20, sort: 'id', direction: 'asc', page: 1
+      per_page: 20, sort_by: 'display_order', sort_dir: 'desc', page: 1
     })
   }
 })
@@ -185,7 +188,7 @@ const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
 
-// 検索フォーム・per_page・sort・directionを reactive で管理
+// 検索フォーム・per_page・sort・sort_dirを reactive で管理
 const openDrawer = ref(false)
 
 // 複数検索用に reactive 拡張
@@ -196,8 +199,8 @@ const form = reactive({
   model: props.filters.model,
   serial_number: props.filters.serial_number,
   per_page: props.filters.per_page ?? 20,
-  sort: props.filters.sort,
-  direction: props.filters.direction ?? 'desc'
+  sort_by: props.filters.sort_by,
+  sort_dir: props.filters.sort_dir ?? 'desc'
 })
 // 選択削除
 const selectedIds = ref([])
@@ -229,8 +232,8 @@ const persistQuery = () => ({
   model: form.model,
   serial_number: form.serial_number,
   per_page: form.per_page,
-  sort_by: form.sort,
-  sort_dir: form.direction,
+  sort_by: form.sort_by,
+  sort_dir: form.sort_dir,
   page: props.sensors.current_page
 })
 
@@ -253,8 +256,8 @@ const goPage = (page) => {
 
 // 列ヘッダクリックでソート
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by = field; form.sort_dir = 'desc' }
   submitSearch()
 }
 

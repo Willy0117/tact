@@ -20,10 +20,25 @@ class Menu extends Model
     ];
 
     protected $casts = [
-        'serving_date' => 'date',
-        'cooking_date' => 'date',
+        'serving_date' => 'date:Y-m-d',
+        'cooking_date' => 'date:Y-m-d',
         'serving_time' => 'string', // time型は string として扱う
     ];
+    // serving_date を常に Y-m-d 形式で返す
+    protected function servingDate(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d') : null
+        );
+    }
+
+    // cooking_date も同様に Y-m-d 形式
+    protected function cookingDate(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d') : null
+        );
+    }
 
     public function tenant()
     {

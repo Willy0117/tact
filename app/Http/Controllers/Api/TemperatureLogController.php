@@ -168,7 +168,7 @@ class TemperatureLogController extends Controller
             'sensor_id'        => $validated['sensor_id'],
             'process_id'       => $validated['process_id'],
             'temperatures'     => $validated['temperatures'],
-            'note'             => $validated['note'],
+            'note'             => $validated['note'] ?? null,
         ]);
 
         return response()->json([
