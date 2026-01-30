@@ -40,7 +40,7 @@ class TemperatureLog extends Model {
   
     public function menu()
     {
-        return $this->belongsTo(Menu::class, 'dish_id'); // dish_id が menus.id を参照
+        return $this->belongsTo(Menu::class, 'menu_id', 'id');
     }
 
     public function sensor()

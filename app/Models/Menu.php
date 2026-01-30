@@ -12,7 +12,7 @@ class Menu extends Model
     protected $fillable = [
         'serving_date',
         'serving_time',  
-        'dish_name',
+        'name',
         'materials',     
         'process',
         'cooking_date',

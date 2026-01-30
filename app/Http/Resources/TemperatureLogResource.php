@@ -14,13 +14,19 @@ class TemperatureLogResource extends JsonResource
             'handy_no' => $this->handy_no,
             'device_id' => $this->device_id,
             'operator_id' => $this->operator_id,
-            'dish_id' => $this->menu_id,         // DB の menu_id を dish_id に変換
+            // 👇 命名ルールに合わせて dish_* に統一
+            'dish_id'   => $this->menu_id,
+            'dish_name' => $this->menu?->name,
+
             'sensor_id' => $this->sensor_id,
-            'process_id' => $this->process_id,
+
+            'process_id'   => $this->process_id,
             'process_name' => $this->process?->name,
+
             'note' => $this->note,
             'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
             'temperatures' => $this->temperatures,
         ];
-    }
+    }    
 }

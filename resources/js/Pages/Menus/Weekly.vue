@@ -1,8 +1,6 @@
 <template>
   <AppLayout>
     <template #header>{{ t('weekly_menu') }}</template>
-
-      <h2 class="text-lg font-semibold mb-4">{{ t('weekly_menu') }}</h2>
       <div class="p-6 space-y-4">
         <div class="flex justify-between items-center">
           <Link
@@ -65,9 +63,9 @@
                       <Link
                         :href="route('menus.edit', { menu: menu.id, redirect_to: route('menus.weekly', { weekStart }) })"
                         class="text-blue-600 hover:underline block"
-                        :title="menu.dish_name"
+                        :title="menu.name"
                       >
-                        {{ truncate(menu.dish_name, 20) }}
+                        {{ truncate(menu.name, 20) }}
                       </Link>
                     </div>
                 </div>

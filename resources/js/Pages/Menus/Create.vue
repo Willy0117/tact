@@ -8,11 +8,11 @@
         <div>
           <label class="block">{{ t('dish_name') }}</label>
           <textarea
-            v-model="form.dish_name"
+            v-model="form.name"
             class="border rounded px-3 py-2 w-full"
             rows="2"
           ></textarea>
-          <div v-if="errors.dish_name" class="text-red-500 text-sm">{{ errors.dish_name }}</div>
+          <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- 配膳日 -->
@@ -112,7 +112,7 @@ const isSuperAdmin = computed(() =>
 )
 
 const form = reactive({
-  dish_name: props.menu?.dish_name ?? '',
+  name: props.menu?.name ?? '',
   serving_date: props.menu?.serving_date ?? '',
   serving_time: props.menu?.serving_time ?? '',
   cooking_date: props.menu?.cooking_date ?? '',
@@ -124,13 +124,13 @@ const form = reactive({
 })
 
 const errors = reactive({
-  dish_name: '', serving_date: '', serving_time: '', cooking_date: '', materials: ''
+  name: '', serving_date: '', serving_time: '', cooking_date: '', materials: ''
 })
 
 // コピー用データをセット
 onMounted(() => {
   if (props.menu) {
-    form.dish_name = props.menu.dish_name
+    form.name = props.menu.name
     form.serving_date = props.menu.serving_date
     form.serving_time = props.menu.serving_time
     form.cooking_date = props.menu.cooking_date

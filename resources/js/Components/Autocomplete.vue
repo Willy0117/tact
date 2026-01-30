@@ -9,6 +9,8 @@
         class="w-full border rounded px-3 py-2 pr-8"
         @focus="onFocus"    
         @blur="hideDropdown"
+        @compositionstart="isComposing = true"
+        @compositionend="onCompositionEnd"
         @input="onInput"
         @keydown="onKeyDown"
       />
@@ -35,21 +37,44 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 const props = defineProps({
   modelValue: [String, Number],
   label: String,
   placeholder: String,
-  fetchUrl: String
+  fetchUrl: String,
+  initialItem: Object,
 })
 
 const emit = defineEmits(['update:modelValue'])
 
-const search = ref(props.modelValue ?? '')
+const search = ref('')
+//const search = ref(props.modelValue ?? '')
 const options = ref([])
 const showDropdown = ref(false)
 const activeIndex = ref(-1)
+
+watch(
+  () => props.initialItem,
+  (item) => {
+    if (item) {
+      search.value = item.label
+    }
+  },
+  { immediate: true }
+)
+
+onMounted(async () => {
+  if (props.modelValue && props.fetchUrl) {
+    const res = await fetch(`${props.fetchUrl}?id=${props.modelValue}`)
+    const item = await res.json()
+
+    if (item?.label) {
+      search.value = item.label
+    }
+  }
+})
 
 const onFocus = async () => {
   showDropdown.value = true
@@ -60,7 +85,15 @@ const onFocus = async () => {
   }
 }
 
+const isComposing = ref(false)
+
+const onCompositionEnd = () => {
+  isComposing.value = false
+  onInput() // 確定後にだけ検索
+}
+
 const onInput = async () => {
+  if (isComposing.value) return
   if (!props.fetchUrl) return
 
   const q = search.value ?? ''

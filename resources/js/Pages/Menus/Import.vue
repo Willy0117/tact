@@ -134,9 +134,9 @@ const menusTable = computed(() => {
         .map(m => {
           // 調理日を追加
           if (m.cooking_date && m.cooking_date !== m.serving_date) {
-            return `${m.dish_name} (${m.cooking_date})`
+            return `${m.name} (${m.cooking_date})`
           }
-          return m.dish_name
+          return m.name
         })
         .join(", ")
       row[date] = items || ""
@@ -229,8 +229,8 @@ servingCols.forEach((col) => {
         const menuCell = sheet[`${col}${row}`];
         if (!menuCell || !menuCell.v) return;
 
-//        const dishName = `${mealType} ${menuCell.v.toString().trim()}`;
-        const dishName = `${menuCell.v.toString().trim()}`;
+//        const Name = `${mealType} ${menuCell.v.toString().trim()}`;
+        const Name = `${menuCell.v.toString().trim()}`;
         const servingDate = servingDates[col];
         if (!servingDate) return;
 
@@ -262,7 +262,7 @@ servingCols.forEach((col) => {
         }
 
         tempMenus.push({
-          dish_name: dishName,
+          name: Name,
           serving_date: servingDate,
           serving_time: servingTime,
           cooking_date: cookingDate,

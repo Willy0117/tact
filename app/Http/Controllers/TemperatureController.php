@@ -8,6 +8,9 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Process;
 use App\Models\Menu;
+use App\Models\Device;
+use App\Models\Sensor;
+use App\Models\Operator;
 use Carbon\Carbon;
 
 class TemperatureController extends Controller
@@ -64,10 +67,10 @@ class TemperatureController extends Controller
         } else {
             // cooking：ログの記録日で絞り込み
             if ($dateFrom) {
-                $query->whereDate('temperature_logs.updated_at', '>=', $dateFrom);
+                $query->whereDate('temperature_logs.created_at', '>=', $dateFrom);
             }
             if ($dateTo) {
-                $query->whereDate('temperature_logs.updated_at', '<=', $dateTo);
+                $query->whereDate('temperature_logs.created_at', '<=', $dateTo);
             }
         }
 
@@ -84,14 +87,14 @@ class TemperatureController extends Controller
             'operator_id',
             'handy_no',
             'process_id',
-            'updated_at',
+            'created_at',
         ];
 
-        $sort = $request->query('sort_by', 'updated_at');
+        $sort = $request->query('sort_by', 'created_at');
         $dir  = $request->query('sort_dir') === 'asc' ? 'asc' : 'desc';
 
         if (! in_array($sort, $allowedSorts, true)) {
-            $sort = 'updated_at';
+            $sort = 'created_at';
         }
 
         if ($sort === 'menu_date') {
@@ -105,11 +108,11 @@ class TemperatureController extends Controller
                 );
             } else {
                 // cooking：記録時刻
-                $query->orderBy('temperature_logs.updated_at', $dir);
+                $query->orderBy('temperature_logs.created_at', $dir);
             }
 
             // 安定ソート
-            $query->orderBy('temperature_logs.updated_at', 'desc');
+            $query->orderBy('temperature_logs.created_at', 'desc');
 
         } else {
             $query->orderBy($sort, $dir);
@@ -142,5 +145,48 @@ class TemperatureController extends Controller
                 'date_to'     => $dateTo,
             ],
         ]);
+    }
+
+    public function edit(Temperature $temperature)
+    {
+        $temperature->load([
+            'menu:id,name',
+            'device:id,name',
+            'operator:id,name',
+            'sensor:id,name',
+            'process:id,name',
+        ]);
+
+        return Inertia::render('Temperatures/Edit', [
+            'temperature' => $temperature,
+        ]);
+    }
+
+    public function update(Request $request, Temperature $temperature)
+    {
+        $validated = $request->validate([
+            'note' => ['nullable', 'string'],
+            'temperatures' => ['required', 'array'],
+            'temperatures.*.datetime' => ['required', 'date'],
+            'temperatures.*.value' => ['required', 'numeric'],
+        ]);
+
+        $temperature->update($validated);
+
+        return redirect()->route('temperatures.index');
+    }
+
+
+    public function updateNote(Request $request, Temperature $temperature)
+    {
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $temperature->update([
+            'note' => $validated['note'],
+        ]);
+
+        return back(); // 一覧に戻す（Inertia的に正解）
     }
 }

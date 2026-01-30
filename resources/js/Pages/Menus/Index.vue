@@ -21,8 +21,8 @@
 
         <div class="p-4 space-y-3">
           <div>
-            <label class="block mb-1">{{ t('dish_name') }}</label>
-            <input v-model="form.dish_name" type="text" :placeholder="t('dish_name')" class="border rounded px-3 py-2 w-full" />
+            <label class="block mb-1">{{ t('name') }}</label>
+            <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
           </div>
           <div>
             <label class="block mb-1">{{ t('serving_date') }}</label>
@@ -82,20 +82,20 @@
               <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
             </th>
             <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
-              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='tenant_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th> 
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('dish_name')">
+            <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('dish_name') }}
-              <span v-if="form.sort==='dish_name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_date')">{{ t('serving_date') }}
-              <span v-if="form.sort==='serving_date'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='serving_date'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_time')">{{ t('serving_time') }}
-              <span v-if="form.sort==='serving_time'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='serving_time'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('cooking_date')">{{ t('cooking_date') }}
-              <span v-if="form.sort==='cooking_date'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='cooking_date'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2">{{ t('materials') }}</th>
             <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
@@ -107,10 +107,10 @@
             <td v-if="isSuperAdmin">
               {{ tenants.find(t => t.id === menu.tenant_id)?.name || '-' }}
             </td>            
-            <td class="px-3 py-2">{{ menu.dish_name }}</td>
-            <td class="px-3 py-2">{{ menu.serving_date ? dayjs(menu.serving_date).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
-            <td class="px-3 py-2">{{ menu.serving_time }}</td>
-            <td class="px-3 py-2">{{ menu.cooking_date ? dayjs(menu.cooking_date).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
+            <td class="px-3 py-2">{{ menu.name }}</td>
+            <td class="px-3 py-2 text-center">{{ menu.serving_date ? dayjs(menu.serving_date).format('YYYY/MM/DD') : '' }}</td>
+            <td class="px-3 py-2 text-center">{{ menu.serving_time }}</td>
+            <td class="px-3 py-2 text-center">{{ menu.cooking_date ? dayjs(menu.cooking_date).format('YYYY/MM/DD') : '' }}</td>
             <td class="px-3 py-2">{{ menu.materials }}</td>
             <td class="px-3 py-2 text-center flex justify-center space-x-1">
               <button @click="copyMenu(menu.id)" class="text-green-500 hover:text-green-700">
@@ -159,7 +159,7 @@ const isSuperAdmin = computed(() =>
 // 検索フォーム
 const openDrawer = ref(false)
 const form = reactive({
-  dish_name: props.filters.dish_name || '',
+  name: props.filters.name || '',
   serving_date_from: props.filters.serving_date_from || '',
   serving_date_to: props.filters.serving_date_to || '',
   serving_time: props.filters.serving_time || '',
@@ -167,8 +167,8 @@ const form = reactive({
   cooking_date_to: props.filters.cooking_date_to || '',
   materials: props.filters.materials || '',
   per_page: props.filters.per_page ?? 20,
-  sort: props.filters.sort || 'id',
-  direction: props.filters.direction ?? 'desc'
+  sort_by: props.filters.sort_by || 'id',
+  sort_dir: props.filters.sort_dir ?? 'desc'
 })
 
 // 選択削除
@@ -184,8 +184,8 @@ const goPage = (page) => router.get(route('menus.index'), { ...persistQuery(), p
 
 // ソート
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by = field; form.sort_dir = 'desc' }
   submitSearch()
 }
 

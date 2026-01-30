@@ -12,6 +12,8 @@
   "create_new": "新規作成",
   "register": "ユーザー登録",
   "already registered?": "すでにアカウントをお持ちですか?",
+  "note_edit": "備考編集",
+  "add": "追加",
   "processes": {
     "title": "工程",
     "list": "工程一覧",
@@ -25,6 +27,19 @@
       "lower": "以下",
       "none": "判定なし"     
     }
+  },
+  "select":{
+    "menu": "料理を選択",
+    "process": "工程を選択",
+    "sensor": "測定器を選択",
+    "device": "調理器具を選択",
+    "operator": "作業者を選択"
+  },
+  "logs":{
+    "serving_date":"配膳日",
+    "cooking_date": "調理予定日",
+    "created_at": "登録日時",
+    "updated_at": "更新日時"
   },
   "edit_process": "工程編集",
   "company_name": "会社名",
@@ -88,7 +103,7 @@
   "weekly_menu": "１週間メニュー",
   "from": "いつから",
   "to": "いつまで",
-  "date_type": "配膳日/登録日",
+  "date_type": "配膳日/登録(調理予定)日",
   "created_date": "登録日",
   "note": "備考",
 

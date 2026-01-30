@@ -180,7 +180,7 @@ class SensorController extends Controller
 
         $sensors = Sensor::query()
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
-            ->orderBy('name', 'desc')
+            ->orderBy('display_order', 'asc')
             ->limit(20)
             ->get()
             ->map(fn($m) => [

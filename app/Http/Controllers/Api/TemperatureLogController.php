@@ -27,7 +27,9 @@ class TemperatureLogController extends Controller
 
         // sort=serving_date:asc
         $rawSort = $request->query('sort', "{$dateType}:desc");
+
         [$sortKey, $dir] = array_pad(explode(':', $rawSort, 2), 2, 'desc');
+
         $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
 
         $from = ! empty($validated['from'])
@@ -40,10 +42,14 @@ class TemperatureLogController extends Controller
 
         $query = TemperatureLog::query()
             ->where('temperature_logs.tenant_id', $validated['tenant_id'])
+            ->leftJoin('menus', 'menus.id', '=', 'temperature_logs.menu_id')
             ->leftJoin('processes', 'processes.id', '=', 'temperature_logs.process_id')
             ->select([
-                'temperature_logs.*',
-                'processes.name as process_name',
+                    'temperature_logs.*',
+                    'menus.serving_date',
+                    'menus.serving_time',
+                    'menus.name as menu_name',
+                    'processes.name as process_name',
             ]);
 
         /*
@@ -53,21 +59,18 @@ class TemperatureLogController extends Controller
         */
         if ($dateType === 'serving_date') {
 
-            $query->join('menus', 'menus.id', '=', 'temperature_logs.menu_id')
-                ->where('menus.serving_date', '>=', $from);
-
-            if ($to) {
-                $query->where('menus.serving_date', '<=', $to);
-            }
+            $query->whereBetween(
+                'menus.serving_date',
+                [$from, $to ?? Carbon::parse('2999-12-31')]
+            );
 
         } else {
-            $query->where('temperature_logs.updated_at', '>=', $from);
 
-            if ($to) {
-                $query->where('temperature_logs.updated_at', '<=', $to);
-            }
+            $query->whereBetween(
+                'temperature_logs.created_at',
+                [$from, $to ?? Carbon::parse('2999-12-31')]
+            );
         }
-
         /*
         |--------------------------------------------------------------------------
         | ソート（sort=xxx:asc）
@@ -75,18 +78,16 @@ class TemperatureLogController extends Controller
         */
         switch ($sortKey) {
             case 'serving_date':
-                // 献立日 + 配膳時間
-                $query->orderByRaw("
-                    TIMESTAMP(
-                        menus.serving_date,
-                        COALESCE(menus.serving_time, '00:00:00')
-                    ) {$dir}
-                ");
+                $query
+                    ->orderBy('menus.serving_date', $dir)
+                    ->orderBy('menus.serving_time', $dir)
+                    ->orderBy('temperature_logs.id', $dir); // ← 同一日時のみの安定用
                 break;
 
             case 'cooking_date':
-                // 調理（記録）日
-                $query->orderBy("temperature_logs.updated_at", $dir);
+                // 優先順位：①調理日 → ②調理時間
+                $query->orderByRaw('DATE(temperature_logs.created_at) ' . $dir)
+                    ->orderByRaw('TIME(temperature_logs.created_at) ' . $dir);
                 break;
 
             default:
@@ -96,10 +97,10 @@ class TemperatureLogController extends Controller
         }
 
         // 安定ソート
-        $query->orderByDesc('temperature_logs.id');
+        //$query->orderByDesc('temperature_logs.id');
 
         $logs = $query
-            ->with(['menu', 'process:id,name'])
+            ->with(['menu:id,name', 'process:id,name'])
             ->get();
 
         return response()->json([
@@ -112,37 +113,48 @@ class TemperatureLogController extends Controller
     public function store(Request $request)
     {
         Log::info('TemperatureLogController@store request', $request->all());
+//2026.01.30改良
+//　sensor_idを必須から外す
+// その代わり、その場合はtenant_idは必須
+//  temperatureも必須から外す　温度記録なしの場合もある
 
         $validated = $request->validate([
             'handy_no'          => 'required|integer',     
             'device_id'         => 'required|integer|exists:devices,id',
             'operator_id'       => 'required|integer|exists:operators,id',
             'dish_id'           => 'required|integer|exists:menus,id',
-            'sensor_id'         => 'required|integer|exists:sensors,id',
+
+            'sensor_id' => 'nullable|integer|exists:sensors,id',
+            'tenant_id' => 'required_without:sensor_id|integer|exists:tenants,id',
+
             'process_id'        => 'required|integer|exists:processes,id',
             'note'              => 'nullable|string|max:1000',
-            'temperatures'      => 'required|array',       // [{"value":90.5,"datetime":"..."}, ...]
-            'temperatures.*.value'    => 'required|numeric',
-            'temperatures.*.datetime' => 'required|date',
+            'temperatures'      => 'nullable|array',       // [{"value":90.5,"datetime":"..."}, ...]
+            'temperatures.*.value'    => 'required_with:temperatures|numeric',
+            'temperatures.*.datetime' => 'required_with:temperatures|date',
         ]);
-        // ---------------------------------------------------------
-        // ① handy_no（serial_number）から sensor を特定
-        // ---------------------------------------------------------
-        $sensor = Sensor::find($validated['sensor_id']);//$sensor = Sensor::where('id', $validated['senser_id'])->first();
 
-        if (!$sensor) {
-            return response()->json([
-                'status' => 'error',
-                'data' => null,
-                'errors' => ['Sensor (handy_no) not found.'],
-            ], 404);
+        if (!empty($validated['sensor_id'])) {
+            $sensor = Sensor::find($validated['sensor_id']);
+            if (!$sensor) {
+                return response()->json([
+                    'status' => 'error',
+                    'data' => null,
+                    'errors' => ['Sensor not found.'],
+                ], 404);
+            }
+            $tenantId = $sensor->tenant_id;
+        } else {
+            // sensor_id が無い場合は tenant_id を必須にする
+            if (empty($validated['tenant_id'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'data' => null,
+                    'errors' => ['Either sensor_id or tenant_id is required.'],
+                ], 422);
+            }
+            $tenantId = $validated['tenant_id'];
         }
-
-        // ---------------------------------------------------------
-        // ② sensor から tenant_id を確定
-        // ---------------------------------------------------------
-        $tenantId = $sensor->tenant_id;
-
         // ---------------------------------------------------------
         // ③ device の tenant_id と矛盾がないかチェック
         // ---------------------------------------------------------
@@ -165,9 +177,9 @@ class TemperatureLogController extends Controller
             'device_id'        => $validated['device_id'],
             'operator_id'      => $validated['operator_id'],
             'menu_id'          => $validated['dish_id'],
-            'sensor_id'        => $validated['sensor_id'],
+            'sensor_id'        => $validated['sensor_id'] ?? null,
             'process_id'       => $validated['process_id'],
-            'temperatures'     => $validated['temperatures'],
+            'temperatures'     => $validated['temperatures'] ?? [],
             'note'             => $validated['note'] ?? null,
         ]);
 

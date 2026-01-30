@@ -26,8 +26,8 @@ class MenuController extends Controller
         if (!$user->hasRole('Super Admin')) {
             $query->where('tenant_id', $user->tenant_id);
         }
-        if ($dish_name = $request->input('dish_name')) {
-            $query->where('dish_name', 'like', "%{$dish_name}%");
+        if ($name = $request->input('')) {
+            $query->where('name', 'like', "%{$name}%");
         }
         if ($process = $request->input('process')) {
             $query->where('process', 'like', "%{$process}%");
@@ -57,7 +57,7 @@ class MenuController extends Controller
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         $menus = $query
-            ->when($request->dish_name, fn($q, $v) => $q->where('dish_name', 'like', "%$v%"))
+            ->when($request->name, fn($q, $v) => $q->where('name', 'like', "%$v%"))
             ->when($request->process, fn($q, $v) => $q->where('process', 'like', "%$v%"))
             ->when($request->serving_date_from, fn($q, $v) => $q->where('serving_date', '>=', $v))
             ->when($request->serving_date_to, fn($q, $v) => $q->where('serving_date', '<=', $v))
@@ -75,7 +75,7 @@ class MenuController extends Controller
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
-                'dish_name', 'process', 'per_page', 'sort_by', 'sort_dir'
+                'name', 'process', 'per_page', 'sort_by', 'sort_dir'
             ]),
             'redirect_to' => '',
         ]);
@@ -99,7 +99,7 @@ class MenuController extends Controller
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
-                'dish_name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
+                'name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
             ]),
             'menu' => $menu, // コピー元のデータを渡す
             'tenants' => $tenants,
@@ -117,14 +117,14 @@ class MenuController extends Controller
         $validated = $request->validate([
             'serving_date' => ['required','date'],
             'serving_time' => ['required','string'],
-            'dish_name' => ['required','string'],
+            'name' => ['required','string'],
             'process' => ['nullable','string'],
             'materials' => ['nullable','string'],
             'cooking_date' => ['required','date'],
             'tenant_id' => ['nullable', 'exists:tenants,id'], 
         ], [
             'serving_date.required' => __('validation.required', ['attribute' => __('配膳日')]),
-            'dish_name.required' => __('validation.required', ['attribute' => __('料理名')]),
+            'name.required' => __('validation.required', ['attribute' => __('料理名')]),
             'cooking_date.required' => __('validation.required', ['attribute' => __('調理日')]),
         ]);
         // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
@@ -146,7 +146,7 @@ class MenuController extends Controller
         return redirect()->route('menus.index', $request->only([
             'serving_date_from', 'serving_date_to',
             'cooking_date_from', 'cooking_date_to',
-            'dish_name', 'process', 'equipment_name', 'measurement_device',
+            'name', 'process', 'equipment_name', 'measurement_device',
             'per_page', 'sort_by', 'sort_dir', 'page',
         ]))->with('success', __('menu has been updated.'));
     }
@@ -164,7 +164,7 @@ class MenuController extends Controller
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
-                'dish_name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
+                'name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
             ]),
             'redirect_to' => $request->query(
                 'redirect_to',
@@ -179,14 +179,14 @@ class MenuController extends Controller
         $validated = $request->validate([
             'serving_date' => ['required','date'],
             'serving_time' => ['required','string'],
-            'dish_name' => ['required','string'],
+            'name' => ['required','string'],
             'process' => ['nullable','string'],
             'materials' => ['nullable','string'],
             'cooking_date' => ['required','date'],
             'tenant_id' => ['nullable', 'exists:tenants,id'], 
         ], [
             'serving_date.required' => __('validation.required', ['attribute' => __('配膳日')]),
-            'dish_name.required' => __('validation.required', ['attribute' => __('料理名')]),
+            'name.required' => __('validation.required', ['attribute' => __('料理名')]),
             'cooking_date.required' => __('validation.required', ['attribute' => __('調理日')]),
         ]);
         // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
@@ -208,7 +208,7 @@ class MenuController extends Controller
         return redirect()->route('menus.index', $request->only([
             'serving_date_from', 'serving_date_to',
             'cooking_date_from', 'cooking_date_to',
-            'dish_name', 'process',
+            'name', 'process',
             'per_page', 'sort_by', 'sort_dir', 'page',
         ]))->with('success', __('menu has been updated.'));
     }
@@ -249,7 +249,7 @@ class MenuController extends Controller
             }
             Menu::create([
                 'tenant_id' => $tenantId,
-                'dish_name' => $m['dish_name'],
+                'name' => $m['name'],
                 'serving_date' => $m['serving_date'],
                 'serving_time' => $servingTime,
                 'cooking_date' => $m['cooking_date'] ?? $m['serving_date'],
@@ -264,108 +264,6 @@ class MenuController extends Controller
             'message' => '献立データを保存しました',
         ]);
     }
-/*    
-    public function importExcel(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls',
-        ]);
-
-        $file = $request->file('file');
-        if (!$file) {
-            return response()->json(['error' => 'ファイルが見つかりません'], 400);
-        }
-
-        $tenantId = Auth::user()->tenant_id;
-
-        $spreadsheet = IOFactory::load($file->getRealPath());
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // 配膳日セルの位置（固定）
-        $servingCols = ['D', 'M', 'V', 'AE', 'AN', 'AW', 'BF'];
-        $servingDates = [];
-        foreach ($servingCols as $col) {
-            $cell = $sheet->getCell($col . '6')->getValue();
-            if ($cell) {
-                // 「11/2(月)」の形式を Y-m-d に変換
-                $dateStr = preg_replace('/\(.+\)/', '', $cell);
-                try {
-                    $servingDates[$col] = Carbon::parse($dateStr)->format('Y-m-d');
-                } catch (\Exception $e) {
-                    $servingDates[$col] = null;
-                }
-            } else {
-                $servingDates[$col] = null;
-            }
-        }
-
-        // データ行は7行目から開始
-        $startRow = 7;
-        $highestRow = $sheet->getHighestRow();
-
-        for ($row = $startRow; $row <= $highestRow; $row++) {
-            $mealType = $sheet->getCell('B' . $row)->getValue();
-            if (!$mealType) continue;
-
-            foreach ($servingCols as $col) {
-                $menuCell = $sheet->getCell($col . $row)->getValue();
-                if (!$menuCell) continue;
-
-                // dish_name = B列（食事区分） + 献立メニュー
-                $dishName = trim($mealType . ' ' . $menuCell);
-
-                // 配膳日
-                $servingDate = $servingDates[$col];
-                if (!$servingDate) continue;
-
-                // 調理日は列 offset で K列や T列など
-                $cookingCol = $this->getCookingCol($col); // 下記で定義
-                $cookingCell = $sheet->getCell($cookingCol . $row)->getValue();
-
-                $cookingDate = null;
-                if ($cookingCell !== null && $cookingCell !== '') {
-                    try {
-                        if (is_numeric($cookingCell)) {
-                            $cookingDate = ExcelDate::excelToDateTimeObject($cookingCell)->format('Y-m-d');
-                        } else {
-                            $cookingDate = Carbon::parse($cookingCell)->format('Y-m-d');
-                        }
-                    } catch (\Exception $e) {
-                        $cookingDate = $servingDate;
-                    }
-                } else {
-                    $cookingDate = $servingDate;
-                }
-
-                // serving_date と同じなら cooking_date を null にする
-                if ($cookingDate === $servingDate) {
-                    $cookingDate = null;
-                }
-
-                // 配膳時間判定
-                $servingTime = $this->getServingTime($mealType);
-
-                // DB登録
-                Menu::create([
-                    'tenant_id' => $tenantId,
-                    'dish_name' => $dishName,
-                    'serving_date' => $servingDate,
-                    'serving_time' => $servingTime,
-                    'cooking_date' => $cookingDate,
-                    'materials' => null,
-                    'disabled' => 1,
-                    'display_order' => 1,
-                ]);
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => '献立データをインポートしました',
-            'fileName' => $file->getClientOriginalName()
-        ]);
-    }
-*/
     /**
      * 配膳日列から調理日列を返す
      */
@@ -456,13 +354,13 @@ class MenuController extends Controller
         $search = $request->input('q');
 
         $menus = Menu::query()
-            ->when($search, fn($q) => $q->where('dish_name', 'like', "%{$search}%"))
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
             ->orderBy('serving_date', 'desc')
             ->limit(20)
             ->get()
             ->map(fn($m) => [
                 'id' => $m->id,
-                'label' => "{$m->dish_name} ({$m->serving_date})"
+                'label' => "{$m->name} ({$m->serving_date})"
             ]);
 
         return response()->json($menus);
