@@ -1,6 +1,7 @@
 <template>
   <AppLayout>
     <template #header>{{ t('temperature') }}</template>
+
     <div dir="rtl">
       <!-- 検索 トリガーボタン -->
         <div class="relative size-4 ...">
@@ -9,10 +10,13 @@
               @click="openDrawer = !openDrawer"
               class="p-2 rounded hover:bg-gray-200 flex items-center justify-center"
             >
-              <MagnifyingGlassIcon class="w-5 h-5 text-gray-600" />
+              <FunnelIcon class="w-5 h-5 text-gray-600" />
             </button>
           </div>
         </div>
+    </div>
+    <div v-if="success" class="mb-4 rounded bg-green-100 px-4 py-2 text-green-800">
+      {{ success }}
     </div>
 
     <div class="p-6 space-y-4">
@@ -104,10 +108,16 @@
               <option v-for="n in [10,20,30,50]" :key="n" :value="n">{{ n }}</option>
             </select>
           </div>
-        <!-- 検索ボタンを右端 -->
-          <button @click="submitSearch" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            {{ t('search') }}
-          </button>
+          <div class="flex items-center justify-end gap-2">
+            <!-- 検索ボタン -->
+            <button @click="submitSearch" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 whitespace-nowrap">
+              {{ t('search') }}
+            </button>
+            <!-- PDFボタン -->
+            <SecondaryButton @click="exportPdf()" class="p-2" title="PDF出力">
+              <PrinterIcon class="h-5 w-5 text-gray-600" /> 
+            </SecondaryButton>
+          </div>
       </div>
 
       <!-- ログ一覧テーブル -->
@@ -258,14 +268,15 @@ import { useI18n } from 'vue-i18n'
 import { router,Link } from '@inertiajs/vue3'
 import dayjs from 'dayjs'
 import axios from 'axios'
-import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentPlusIcon} from '@heroicons/vue/24/outline'
+import { PlusIcon, PencilIcon, PrinterIcon, FunnelIcon, MagnifyingGlassIcon, DocumentPlusIcon} from '@heroicons/vue/24/outline'
 
 
 const props = defineProps({
   logs: Object,
   tenants: Array,
   user: Object,
-  filters: Object
+  filters: Object,
+  success: String,
 })
 console.log(props.logs);
 
@@ -368,6 +379,21 @@ const saveNote = () => {
     }
   )
 }
+
+const exportPdf = () => {
+    // persistQuery() で現在の条件をまるごと取得
+    const query = persistQuery();
+    
+    // PDFにはページネーション(page)や件数(per_page)は不要かもしれないので削除
+    delete query.page;
+    delete query.per_page;
+
+    const params = new URLSearchParams(query).toString();
+    const url = `${route('pdf.temperature')}?${params}`;
+    
+    window.open(url, '_blank');
+};
+
 </script>
 <style>
 .temp-grid {

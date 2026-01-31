@@ -46,6 +46,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/processes/by-tenant', [\App\Http\Controllers\ProcessController::class, 'byTenant'])->name('processes.byTenant');
 
+    // PDF出力
+    Route::get('/pdf/temperature', [\App\Http\Controllers\PdfController::class, 'generate'])->name('pdf.temperature');
+
     // Sensor 
     Route::resource('sensors', \App\Http\Controllers\SensorController::class);
     Route::post('sensors/bulk-delete', [\App\Http\Controllers\SensorController::class, 'bulkDelete'])->name('sensors.bulkDelete');
