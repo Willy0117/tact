@@ -18,60 +18,57 @@ class TemperatureController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-
         $query = Temperature::query();
+
+        // テナント制限
         if (! $user->hasRole('Super Admin')) {
             $query->where('tenant_id', $user->tenant_id);
         }
-        // 検索
-        if ($menuId = $request->input('menu_id')) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | 検索条件（URLクエリから取得）
+        |--------------------------------------------------------------------------
+        */
+        $menuId     = $request->query('menu_id');
+        $sensorId   = $request->query('sensor_id');
+        $deviceId   = $request->query('device_id');
+        $operatorId = $request->query('operator_id');
+        $handyNo    = $request->query('handy_no');
+        $processId  = $request->query('process_id');
+
+        if ($menuId) {
             $query->where('menu_id', $menuId);
         }
-        if ($sensorId = $request->input('sensor_id')) {
+        if ($sensorId) {
             $query->where('sensor_id', $sensorId);
         }
-        if ($deviceId = $request->input('device_id')) {
+        if ($deviceId) {
             $query->where('device_id', $deviceId);
         }
-        if ($operatorId = $request->input('operator_id')) {
+        if ($operatorId) {
             $query->where('operator_id', $operatorId);
         }
-
-        if ($handyNo = $request->input('handy_no')) {
+        if ($handyNo) {
             $query->where('handy_no', $handyNo);
         }
-        if ($processId = $request->input('process_id')) {
+        if ($processId) {
             $query->where('process_id', $processId);
         }
 
-        // 日付絞り込み（献立日 or 調理日）
-        $dateFrom = $request->input('date_from', Carbon::today()->toDateString());
-        $dateTo   = $request->input('date_to', Carbon::today()->toDateString());
-        $dateType = $request->input('date_type', 'serving'); // デフォルト献立日
-        /*
-        |--------------------------------------------------------------------------
-        | 日付絞り込み
-        |--------------------------------------------------------------------------
-        */
+        // 日付絞り込み（デフォルトは今日）
+        $dateFrom = $request->query('date_from', Carbon::today()->toDateString());
+        $dateTo   = $request->query('date_to', Carbon::today()->toDateString());
+        $dateType = $request->query('date_type', 'serving'); // デフォルト献立日
+
         if ($dateType === 'serving') {
-
             $query->whereHas('menu', function ($q) use ($dateFrom, $dateTo) {
-                if ($dateFrom) {
-                    $q->where('serving_date', '>=', $dateFrom);
-                }
-                if ($dateTo) {
-                    $q->where('serving_date', '<=', $dateTo);
-                }
+                $q->when($dateFrom, fn($q) => $q->where('serving_date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('serving_date', '<=', $dateTo));
             });
-
         } else {
-            // cooking：ログの記録日で絞り込み
-            if ($dateFrom) {
-                $query->whereDate('temperature_logs.created_at', '>=', $dateFrom);
-            }
-            if ($dateTo) {
-                $query->whereDate('temperature_logs.created_at', '<=', $dateTo);
-            }
+            $query->when($dateFrom, fn($q) => $q->whereDate('temperature_logs.created_at', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->whereDate('temperature_logs.created_at', '<=', $dateTo));
         }
 
         /*
@@ -98,7 +95,6 @@ class TemperatureController extends Controller
         }
 
         if ($sort === 'menu_date') {
-
             if ($dateType === 'serving') {
                 // 配膳日 + 配膳時間
                 $query->orderBy(
@@ -107,36 +103,43 @@ class TemperatureController extends Controller
                     $dir
                 );
             } else {
-                // cooking：記録時刻
                 $query->orderBy('temperature_logs.created_at', $dir);
             }
-
             // 安定ソート
             $query->orderBy('temperature_logs.created_at', 'desc');
-
         } else {
             $query->orderBy($sort, $dir);
         }
-        // ページネーション
-        $perPage = intval($request->input('per_page', 20));
+
+        /*
+        |--------------------------------------------------------------------------
+        | ページネーション
+        |--------------------------------------------------------------------------
+        */
+        $perPage = intval($request->query('per_page', 20));
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        $logs = $query->with(['menu', 'sensor', 'device', 'operator', 'process']) // ← 献立情報をロード
+        $logs = $query->with(['menu', 'sensor', 'device', 'operator', 'process'])
             ->paginate($perPage)
-            ->withQueryString();
+            ->withQueryString(); // URL クエリ保持
 
+        /*
+        |--------------------------------------------------------------------------
+        | Inertia レンダリング
+        |--------------------------------------------------------------------------
+        */
         return Inertia::render('Temperatures/Index', [
             'logs' => $logs,
             'tenants' => $tenants,
-            'user' => $request->user(),
+            'user' => $user,
             'filters' => [
-                'menu_id'     => $request->input('menu_id'),
-                'sensor_id'   => $request->input('sensor_id'),
-                'device_id'   => $request->input('device_id'),
-                'operator_id' => $request->input('operator_id'),
-                'handy_no'    => $request->input('handy_no'),
-                'process_id'  => $request->input('process_id'),
+                'menu_id'     => $menuId,
+                'sensor_id'   => $sensorId,
+                'device_id'   => $deviceId,
+                'operator_id' => $operatorId,
+                'handy_no'    => $handyNo,
+                'process_id'  => $processId,
                 'per_page'    => $perPage,
                 'sort_by'     => $sort,
                 'sort_dir'    => $dir,
@@ -147,7 +150,8 @@ class TemperatureController extends Controller
         ]);
     }
 
-    public function edit(Temperature $temperature)
+
+    public function edit(Temperature $temperature, Request $request)
     {
         $temperature->load([
             'menu:id,name',
@@ -156,24 +160,45 @@ class TemperatureController extends Controller
             'sensor:id,name',
             'process:id,name',
         ]);
-
+    // Index 側の検索条件を Edit に渡す
+        $filters = $request->only([
+            'menu_id', 'sensor_id', 'device_id', 'operator_id', 'handy_no',
+            'process_id', 'per_page', 'sort_by', 'sort_dir',
+            'date_type', 'date_from', 'date_to', 'page',
+        ]);
         return Inertia::render('Temperatures/Edit', [
             'temperature' => $temperature,
+            'filters' => $filters,
         ]);
     }
 
     public function update(Request $request, Temperature $temperature)
     {
         $validated = $request->validate([
+//            'handy_no'    => ['nullable', 'string'],
+            'menu_id'     => ['required', 'integer', 'exists:menus,id'],
+            'device_id'   => ['required', 'integer', 'exists:devices,id'],
+            'operator_id' => ['required', 'integer', 'exists:operators,id'],
+            'sensor_id'   => ['nullable', 'integer', 'exists:sensors,id'],
+            'process_id'  => ['required', 'integer', 'exists:processes,id'],
+
             'note' => ['nullable', 'string'],
-            'temperatures' => ['required', 'array'],
-            'temperatures.*.datetime' => ['required', 'date'],
-            'temperatures.*.value' => ['required', 'numeric'],
+            
+            'note' => ['nullable', 'string'],
+            'temperatures' => ['nullable', 'array'], // ← 空でもOK
+            'temperatures.*.datetime' => ['required_with:temperatures', 'date'],
+            'temperatures.*.value'    => ['required_with:temperatures', 'numeric'],
         ]);
 
         $temperature->update($validated);
 
-        return redirect()->route('temperatures.index');
+        $filters = $request->only([
+            'menu_id', 'sensor_id', 'device_id', 'operator_id', 'handy_no',
+            'process_id', 'per_page', 'sort_by', 'sort_dir',
+            'date_type', 'date_from', 'date_to', 'page',
+        ]);
+        return back()->with('success', 'Updated successfully');
+
     }
 
 

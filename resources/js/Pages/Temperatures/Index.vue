@@ -71,16 +71,8 @@
               <input 
                 type="date" 
                 v-model="form.date_from" 
-                class="w-full border rounded px-3 py-2 pr-8" 
+                class="w-full border rounded px-3 py-2" 
               />
-              <button 
-                v-if="form.date_from"
-                @click="form.date_from = ''"
-                type="button"
-                class="absolute right-2 text-gray-400 hover:text-gray-600 flex items-center justify-center h-full"
-              >
-                X
-              </button>
             </div>
           </div>
 
@@ -91,16 +83,8 @@
               <input 
                 type="date" 
                 v-model="form.date_to" 
-                class="w-full border rounded px-3 py-2 pr-8" 
+                class="w-full border rounded px-3 py-2" 
               />
-              <button 
-                v-if="form.date_to"
-                @click="form.date_to = ''"
-                type="button"
-                class="absolute right-2 text-gray-400 hover:text-gray-600 flex items-center justify-center h-full"
-              >
-                X
-              </button>
             </div>
           </div>
           <div>
@@ -210,7 +194,7 @@
             <td class="px-3 py-2">
               <div class="flex justify-center space-x-1">
                 <Link
-                  :href="route('temperatures.edit', {temperature: log.id,...persistQuery(),})"
+                  :href="route('temperatures.edit', {temperature: log.id, ...persistQuery() })"
                   class="text-blue-500 hover:text-blue-700"
                 >
                   <PencilIcon class="w-4 h-4"/>
@@ -317,14 +301,15 @@ const persistQuery = () => ({
   operator_id: form.operator_id || '',
   handy_no: form.handy_no || '',
   process_id: form.process_id || '',
-  date_from: form.filters?.date_from || '',
-  date_to: form.filters?.date_to || '',
+  date_from: form.date_from || '',
+  date_to: form.date_to || '',
   date_type: form.date_type || 'serving',
   per_page: form.per_page,
   sort_by: form.sort_by,
   sort_dir: form.sort_dir,
-  page: props.filters?.current_page
+  page: props.filters?.current_page || 1,
 })
+
 
 const startItem = computed(() => props.logs.per_page * (props.logs.current_page - 1) + 1)
 const endItem = computed(() => Math.min(props.logs.per_page * props.logs.current_page, props.logs.total))

@@ -1,5 +1,5 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3'
+import { useForm, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Autocomplete from '@/Components/Autocomplete.vue'
 
@@ -11,7 +11,10 @@ const { t } = useI18n()
 
 const props = defineProps({
   temperature: Object,
+  filters: Object,
 })
+
+console.log(props)
 
 const form = useForm({
   handy_no: props.temperature.handy_no,
@@ -26,8 +29,17 @@ const form = useForm({
   note: props.temperature.note,
 })
 
-const submit = () => {
-  form.put(route('temperatures.update', props.temperature.id))
+const submit= () => {
+  router.put(
+    route('temperatures.update', props.temperature.id),
+    form.data(),
+    {
+      preserveState: true,
+      onError: (err) => Object.assign(errors, err),
+      onSuccess: () =>
+        router.get(route('temperatures.index', props.filters)),
+    }
+  )
 }
 
 const addRow = () => {
@@ -164,9 +176,12 @@ const removeRow = (index) => {
 
       <!-- buttons -->
       <div class="flex justify-end gap-3 pt-4">
-        <SecondaryButton @click="$inertia.visit(route('temperatures.index'))">
-          {{ t('cancel') }} 
+        <SecondaryButton 
+        @click="$inertia.visit(route('temperatures.index', props.filters))"
+        >
+        {{ t('cancel') }} 
         </SecondaryButton>
+
         <PrimaryButton :disabled="form.processing" @click="submit">
           {{ t('update') }}
         </PrimaryButton>
