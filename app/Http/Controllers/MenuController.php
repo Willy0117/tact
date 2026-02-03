@@ -47,8 +47,8 @@ class MenuController extends Controller
             $query->where('cooking_date', '<=', $cooking_date_to);
         }
         // ソート
-        $sortBy = $request->input('sort', 'id');
-        $sortDir = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $sortBy = $request->input('sort_by', 'serving_date');
+        $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
         //$query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
@@ -57,6 +57,10 @@ class MenuController extends Controller
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         $menus = $query
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
             ->when($request->name, fn($q, $v) => $q->where('name', 'like', "%$v%"))
             ->when($request->process, fn($q, $v) => $q->where('process', 'like', "%$v%"))
             ->when($request->serving_date_from, fn($q, $v) => $q->where('serving_date', '>=', $v))
@@ -75,7 +79,7 @@ class MenuController extends Controller
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
-                'name', 'process', 'per_page', 'sort_by', 'sort_dir'
+                'name', 'process', 'per_page', 'sort_by', 'sort_dir' , 'tenant_id',
             ]),
             'redirect_to' => '',
         ]);
@@ -99,7 +103,7 @@ class MenuController extends Controller
             'filters' => $request->only([
                 'serving_date_from', 'serving_date_to',
                 'cooking_date_from', 'cooking_date_to',
-                'name', 'process', 'per_page', 'sort_by', 'sort_dir','page'
+                'name', 'process', 'per_page', 'sort_by', 'sort_dir','page' , 'tenant_id',
             ]),
             'menu' => $menu, // コピー元のデータを渡す
             'tenants' => $tenants,

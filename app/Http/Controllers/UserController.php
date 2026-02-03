@@ -63,7 +63,7 @@ class UserController extends Controller
             ? Tenant::orderBy('name')->get(['id', 'name'])
             : collect(); // その他のユーザーは空配列
         // ページあたり件数
-        $perPage = intval($request->input('per_page', 10));
+        $perPage = intval($request->input('per_page', 20));
         $users = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Users/Index', [

@@ -199,8 +199,8 @@ const form = reactive({
   model: props.filters.model,
   serial_number: props.filters.serial_number,
   per_page: props.filters.per_page ?? 20,
-  sort_by: props.filters.sort_by,
-  sort_dir: props.filters.sort_dir ?? 'desc'
+  sort_by: props.filters.sort_by ?? 'display_order',
+  sort_dir: props.filters.sort_dir ?? 'ASC'
 })
 // 選択削除
 const selectedIds = ref([])

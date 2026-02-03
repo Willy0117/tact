@@ -36,7 +36,7 @@ class ProcessController extends Controller
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        $processes = Process::query()
+        $processes = $query
             ->when(
                 $request->tenant_id > 0,
                 fn ($q) => $q->where('tenant_id', $request->tenant_id)
@@ -51,7 +51,7 @@ class ProcessController extends Controller
             'processes' => $processes,
             'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['name','per_page','sort_by','sort_dir']),
+            'filters' => $request->only(['name','per_page','sort_by','sort_dir','tenant_id']),
         ]);
     }
 

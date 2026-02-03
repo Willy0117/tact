@@ -22,7 +22,7 @@
     <div class="p-6 space-y-4">
       <!-- 検索フォーム -->
       <div v-if="openDrawer" class="grid grid-cols-5 gap-2 items-end">
-          
+     
           <!-- Menu Autocomplete -->
           <Autocomplete
             v-model="form.menu_id"
@@ -65,7 +65,7 @@
             <input type="text" v-model="form.handy_no" placeholder="Handy No" class="border rounded px-3 py-2 w-full"/>
           </div -->
       </div>
-      <div class="grid grid-cols-5 gap-2 items-end">
+      <div class="grid grid-cols-6 gap-2 items-end">
 
           <!-- 2行目：日付 + 献立日/調理日 + 検索ボタン -->
           <!-- From日 -->
@@ -96,6 +96,7 @@
             <select v-model="form.date_type" class="border rounded px-3 py-2 pr-8 appearance-none">
               <option value="serving">{{ t('logs.serving_date') }}</option>
               <option value="cooking">{{ t('logs.cooking_date') }}</option>
+              <option value="created">{{ t('logs.created_date') }}</option>
             </select>
           </div>
           <div>
@@ -108,6 +109,23 @@
               <option v-for="n in [10,20,30,50]" :key="n" :value="n">{{ n }}</option>
             </select>
           </div>
+          <div v-if="isSuperAdmin">
+            <label class="block mb-1">{{ t('tenant') }}</label>
+            <select
+              v-model.number="form.tenant_id"
+              :placeholder="t('select_tenant')"
+              class="border rounded px-3 py-2 w-full"
+            >
+              <option value="">{{ t('select_tenant') }}</option>
+              <option
+                v-for="tenant in tenants"
+                :key="tenant.id"
+                :value="tenant.id"
+              >
+                {{ tenant.name }}
+              </option>
+            </select>
+          </div>  
           <div class="flex items-center justify-end gap-2">
             <!-- 検索ボタン -->
             <button @click="submitSearch" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 whitespace-nowrap">
@@ -128,7 +146,7 @@
               class="px-3 py-2 cursor-pointer"
               @click="toggleDateSort"
             >
-              {{ form.date_type === 'serving' ? t('logs.serving_date') : t('logs.cooking_date') }}
+             {{ t(dateTypeKey) }}
               <span v-if="form.sort_by === 'menu_date'">{{ form.sort_dir === 'asc' ? '▲' : '▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('menu_id')">
@@ -282,6 +300,17 @@ console.log(props.logs);
 
 const { t } = useI18n()
 
+const dateTypeKey = computed(() => {
+  return {
+    serving: 'logs.serving_date',
+    cooking: 'logs.cooking_date',
+    created: 'logs.created_date',
+  }[form.date_type] ?? ''
+})
+
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
 // 検索フォーム・per_page・sort・sort_dirを reactive で管理
 const openDrawer = ref(false)
 
@@ -298,11 +327,12 @@ const form = reactive({
   handy_no: props.filters.handy_no || '',
   process_id: props.filters.process_id || '',
   per_page: props.filters.per_page || 20,
-  sort_by: props.filters.sort_by || 'id',
+  sort_by: props.filters.sort_by || 'serving_date',
   sort_dir: props.filters.sort_dir || 'desc',
   date_from: props.filters.date_from || '',
   date_to: props.filters.date_to || '',
-  date_type: props.filters.date_type || 'serving'
+  date_type: props.filters.date_type || 'serving',
+  tenant_id: props.filters.tenant_id,
 })
 // persistQueryに各検索項目を追加
 const persistQuery = () => ({
@@ -318,7 +348,8 @@ const persistQuery = () => ({
   per_page: form.per_page,
   sort_by: form.sort_by,
   sort_dir: form.sort_dir,
-  page: props.filters?.current_page || 1,
+  page: props.current_page || 1,
+  tenant_id: props.tenant_id,
 })
 
 

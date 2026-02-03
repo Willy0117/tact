@@ -66,6 +66,11 @@ class TemperatureController extends Controller
                 $q->when($dateFrom, fn($q) => $q->where('serving_date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('serving_date', '<=', $dateTo));
             });
+        } elseif ($dateType === 'cooking') { 
+            $query->whereHas('menu', function ($q) use ($dateFrom, $dateTo) {
+                $q->when($dateFrom, fn($q) => $q->where('cooking_date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('cooking_date', '<=', $dateTo));
+            });
         } else {
             $query->when($dateFrom, fn($q) => $q->whereDate('temperature_logs.created_at', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->whereDate('temperature_logs.created_at', '<=', $dateTo));
@@ -102,6 +107,13 @@ class TemperatureController extends Controller
                         ->whereColumn('menus.id', 'temperature_logs.menu_id'),
                     $dir
                 );
+            } elseif ($dateType === 'cooking') {
+                // 配膳日 + 配膳時間
+                $query->orderBy(
+                    Menu::selectRaw("TIMESTAMP(cooking_date, COALESCE(serving_time, '00:00:00'))")
+                        ->whereColumn('menus.id', 'temperature_logs.menu_id'),
+                    $dir
+                );
             } else {
                 $query->orderBy('temperature_logs.created_at', $dir);
             }
@@ -120,7 +132,12 @@ class TemperatureController extends Controller
 
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        $logs = $query->with(['menu', 'sensor', 'device', 'operator', 'process'])
+        $logs = $query
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
+            ->with(['menu', 'sensor', 'device', 'operator', 'process'])
             ->paginate($perPage)
             ->withQueryString(); // URL クエリ保持
 

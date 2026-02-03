@@ -13,50 +13,32 @@ class ProcessController extends Controller
 {
     public function index(Request $request)
     {
-        // 全件取得
-        $processes = Process::all();
-        $data = ProcessResource::collection($processes);
-        $meta = [
-            'page' => null,
-            'per_page' => null,
-            'total' => $data->count(),
-        ];
-        // クエリ作成
-        $query = Process::where('tenant_id', $request->tenant_id)->where('disabled', 1); // ここを追加
+        // -------------------------------------------------
+        // validation
+        // -------------------------------------------------
+        $validated = $request->validate([
+            'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
+        ]);
 
-        if ($request->q) {
-            $query->where('name', 'like', "%{$request->q}%");
-        }
+        // -------------------------------------------------
+        // base query
+        // -------------------------------------------------
+        $query = Process::where('tenant_id', $validated['tenant_id'])
+            ->where('disabled', 1);
+        $query->orderBy('display_order', 'asc');
 
-        if ($request->sort) {
-            [$field, $direction] = explode(':', $request->sort);
-            $query->orderBy($field, $direction);
-        } else {
-            $query->orderBy('display_order', 'asc');
-        }
+        // -------------------------------------------------
+        // no pagination
+        // -------------------------------------------------
+        $processes = $query->get();
 
-        $perPage = $request->per_page;
-
-        if ($perPage) {
-            // ページネーションあり
-            $Processes = $query->paginate($perPage);
-            $data = ProcessResource::collection($Processes);
-            $meta = [
-                'page' => $Processes->currentPage(),
-                'per_page' => $Processes->perPage(),
-                'total' => $Processes->total(),
-            ];
-        } else {
-            // 全件取得
-            $Processes = $query->get();
-            $data = ProcessResource::collection($Processes);
-            $meta = [
-                'page' => 1,
-                'per_page' => $Processes->count(),
-                'total' => $Processes->count(),
-            ];
-        }
-
-        return ApiResponse::success($data, $meta);
+        return ApiResponse::success(
+            ProcessResource::collection($processes),
+            [
+                'page'     => 1,
+                'per_page' => $processes->count(),
+                'total'    => $processes->count(),
+            ]
+        );
     }
 }

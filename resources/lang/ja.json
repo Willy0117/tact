@@ -38,7 +38,8 @@
   },
   "logs":{
     "serving_date":"配膳日",
-    "cooking_date": "調理予定日",
+    "cooking_date": "調理日",
+    "created_date": "登録日",
     "created_at": "登録日時",
     "updated_at": "更新日時"
   },
@@ -104,7 +105,7 @@
   "weekly_menu": "１週間メニュー",
   "from": "いつから",
   "to": "いつまで",
-  "date_type": "配膳日/登録(調理予定)日",
+  "date_type": "配膳日/調理日/登録日",
   "created_date": "登録日",
   "note": "備考",
 

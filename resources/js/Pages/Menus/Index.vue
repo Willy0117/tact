@@ -20,6 +20,23 @@
         </div>
 
         <div class="p-4 space-y-3">
+          <div v-if="isSuperAdmin">
+            <label class="block mb-1">{{ t('tenant') }}</label>
+            <select
+              v-model.number="form.tenant_id"
+              :placeholder="t('select_tenant')"
+              class="border rounded px-3 py-2 w-full"
+            >
+              <option value="">{{ t('select_tenant') }}</option>
+              <option
+                v-for="tenant in tenants"
+                :key="tenant.id"
+                :value="tenant.id"
+              >
+                {{ tenant.name }}
+              </option>
+            </select>
+          </div> 
           <div>
             <label class="block mb-1">{{ t('name') }}</label>
             <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
@@ -167,8 +184,9 @@ const form = reactive({
   cooking_date_to: props.filters.cooking_date_to || '',
   materials: props.filters.materials || '',
   per_page: props.filters.per_page ?? 20,
-  sort_by: props.filters.sort_by || 'id',
-  sort_dir: props.filters.sort_dir ?? 'desc'
+  sort_by: props.filters.sort_by || 'serving_date',
+  sort_dir: props.filters.sort_dir ?? 'desc',
+  tenant_id: props.filters.tenant_id,
 })
 
 // 選択削除

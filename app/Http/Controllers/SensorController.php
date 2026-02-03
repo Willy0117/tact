@@ -15,6 +15,7 @@ class SensorController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+
         $query = Sensor::query();
 
         // テナント絞り込み（Super Admin は全件表示）
@@ -37,7 +38,7 @@ class SensorController extends Controller
         }
 
         // ソート
-        $sortBy = $request->input('sort_by', 'id');
+        $sortBy = $request->input('sort_by', 'display_order');
         $sortDir = $request->input('sort_dir', 'asc');
         $query->orderBy($sortBy, $sortDir);
 
@@ -55,7 +56,7 @@ class SensorController extends Controller
             ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
             ->when($request->model, fn($q,$v)=>$q->where('model','like',"%$v%"))
             ->when($request->serial_number, fn($q,$v)=>$q->where('serial_number','like',"%$v%"))
-            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
+            ->orderBy($request->sort_by ?? 'display_order', $request->sort_dir ?? 'asc')
             ->paginate($perPage)
             ->withQueryString(); // 検索条件をページリンクに保持
 

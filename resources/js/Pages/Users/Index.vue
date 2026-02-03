@@ -103,23 +103,23 @@
             </th>
             <!--th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
               {{ t('code') }}
-              <span v-if="form.sort==='code'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='code'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th -->
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
               {{ t('name') }}
-              <span v-if="form.sort==='name'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('email')">
               {{ t('email') }}
-              <span v-if="form.sort==='email'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='email'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">
               {{ t('tenant_id') }}
-              <span v-if="form.sort==='tenant_id'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort_by==='tenant_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('role')">
               {{ t('role') }}
-              <span v-if="form.sort==='role'">{{ form.direction==='asc'?'▲':'▼' }}</span>
+              <span v-if="form.sort==='role'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
 
             <th class="px-3 py-2">{{ t('updated_at') }}</th>
@@ -182,8 +182,8 @@ const form = reactive({
    email: props.filters.email || '',
    tenant_id: props.filters.tenant_id ? Number(props.filters.tenant_id) : 0,
    per_page: props.filters.per_page || 20,
-   sort: props.filters.sort || 'id',
-   direction: props.filters.direction || 'asc'
+   sort_by: props.filters.sort_by || 'id',
+   sort_dir: props.filters.sort_dir || 'asc'
 })
 
 const selectedIds = ref([])
@@ -205,8 +205,8 @@ const persistQuery = () => ({
   email: form.email,
   tenant_id: form.tenant_id,
   per_page: form.per_page,
-  sort_by: form.sort,
-  sort_dir: form.direction,
+  sort_by: form.sort_by,
+  sort_dir: form.sort_dir,
   page: props.users.current_page
 })
 
@@ -219,8 +219,8 @@ const goPage = (page) => {
 }
 
 const sortBy = (field) => {
-  if (form.sort === field) form.direction = form.direction==='asc'?'desc':'asc'
-  else { form.sort = field; form.direction = 'asc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  else { form.sort_by = field; form.sort_dir = 'asc' }
   submitSearch()
 }
 

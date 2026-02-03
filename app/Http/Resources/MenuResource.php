@@ -9,7 +9,7 @@ class MenuResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'dish_name' => $this->dish_name,
+            'dish_name' => $this->name,
             'materials' => $this->materials,
             'process' => $this->process,
             'serving_date' => $this->serving_date->format('Y-m-d'),
