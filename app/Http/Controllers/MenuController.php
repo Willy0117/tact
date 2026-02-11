@@ -314,6 +314,8 @@ class MenuController extends Controller
 
         $user = $request->user();
 
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+
         $query = Menu::query();
 
         // テナント絞り込み（Super Admin は全件表示）
@@ -326,6 +328,10 @@ class MenuController extends Controller
 
         // メニューを取得し「日付 → 時間 → 配列」に変換
         $menus = (clone $query)
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
             ->orderBy('serving_time')
             ->get()
             ->groupBy(function ($menu) {
@@ -345,6 +351,9 @@ class MenuController extends Controller
             ->pluck('serving_time');
 
         return Inertia::render('Menus/Weekly', [
+            'user'     => $user,
+            'tenant_id'=> $request->tenant_id,
+            'tenants' => $tenants,
             'menuData' => $menus,
             'servingTimes' => $servingTimes,
             'weekStart' => $startDate->toDateString(),

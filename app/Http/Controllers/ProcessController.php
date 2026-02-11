@@ -51,7 +51,7 @@ class ProcessController extends Controller
             'processes' => $processes,
             'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['name','per_page','sort_by','sort_dir','tenant_id']),
+            'filters' => $request->only(['tenant_id','name','per_page','sort_by','sort_dir','tenant_id']),
         ]);
     }
 
@@ -70,7 +70,7 @@ class ProcessController extends Controller
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         return Inertia::render('Processes/Edit', [
-            'filters' => $request->only(['name','per_page','sort_by','sort_dir','page']),
+            'filters' => $request->only(['tenant_id','name','per_page','sort_by','sort_dir','page']),
             'process' => $process, // コピー元のデータを渡す
             'tenants' => $tenants,
             'user' => $user, // Vue 側で判定に必要
@@ -115,7 +115,7 @@ class ProcessController extends Controller
 
         Process::create($validated);
 
-        return redirect()->route('processes.index', $request->only(['name','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('processes.index', $request->only(['tenant_id','name','per_page','sort_by','sort_dir','page']))
             ->with('success', __('process has been created.'));
     }
 
@@ -130,7 +130,7 @@ class ProcessController extends Controller
             'tenants' => $tenants,
             'user' => $user,
             'mode' => 'edit',
-            'filters' => $request->only(['name','per_page','sort_by','sort_dir','page'])
+            'filters' => $request->only(['tenant_id','name','per_page','sort_by','sort_dir','page'])
         ]);
     }
 
@@ -171,7 +171,7 @@ class ProcessController extends Controller
 
         $process->update($validated);
 
-        return redirect()->route('processes.index', $request->only(['name','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('processes.index', $request->only(['tenant_id','name','per_page','sort_by','sort_dir','page']))
             ->with('success', __('process has been updated.'));
     }
 

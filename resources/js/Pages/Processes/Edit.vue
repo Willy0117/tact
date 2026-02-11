@@ -207,10 +207,22 @@ const isEdit = computed(() => props.mode === 'edit')
 
 const submitForm = () => {
   if (isEdit.value) {
-    form.put(route('processes.update', props.process.id))
+    router.put(
+      route('processes.update', props.process.id), // filters は付けない
+      form,
+      {
+        preserveState: true,
+        onError: (err) => Object.assign(errors, err),
+        onSuccess: () => router.get(route('processes.index', props.filters)), // index の検索条件を保持して戻る
+      }
+    )
   } else {
-    form.post(route('processes.store'))
+    router.post(route('processes.store'),
+      form, {
+        preserveState: true,
+        onSuccess: () => router.get(route('processes.index', props.filters)), // index の検索条件を保持して戻る
+        onError: (errs) => Object.assign(errors, errs)
+      })
   }
 }
-
 </script>

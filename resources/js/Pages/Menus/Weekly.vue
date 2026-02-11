@@ -1,14 +1,36 @@
 <template>
   <AppLayout>
     <template #header>{{ t('weekly_menu') }}</template>
+    <!-- Drawer -->
       <div class="p-6 space-y-4">
         <div class="flex justify-between items-center">
           <Link
-            :href="route('menus.create', { redirect_to })"
+            :href="route('menus.create', { redirect_to, tenant_id: form.tenant_id })"
             class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
           >
             ＋ {{ t('add_menu') }}
           </Link>
+          <div v-if="isSuperAdmin" class="flex items-center gap-2">
+            <label class="text-sm text-gray-700 whitespace-nowrap">
+              {{ t('tenant') }}
+            </label>
+
+            <select
+              v-model.number="form.tenant_id"
+              @change="changeWeek(0)"
+              class="border rounded px-3 py-1 text-sm h-8 w-full"
+            >
+              <option value="">{{ t('select_tenant') }}</option>
+              <option
+                v-for="tenant in tenants"
+                :key="tenant.id"
+                :value="tenant.id"
+              >
+                {{ tenant.name }}
+              </option>
+            </select>
+          </div>
+
           <div class="inline-flex border rounded overflow-hidden">
             <!-- 前の週ボタン -->
             <button
@@ -82,20 +104,30 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router } from '@inertiajs/vue3'
-import { reactive,computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ja'
 // Heroicons
 import {
-  CalendarIcon,
+  CalendarIcon, MagnifyingGlassIcon,
 } from '@heroicons/vue/24/outline'
 
 dayjs.locale('ja')
 
 const { t } = useI18n()
 
+const isSuperAdmin = computed(() =>
+  props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
+)
+
+// 検索フォーム・per_page・sort・sort_dirを reactive で管理
+const openDrawer = ref(false)
+
 const props = defineProps({
+  user: Object,
+  tenant_id: String,
+  tenants: Array,
   menuData: Object,        // { '2025-11-03': { '08:00': [ {id:1,name:'...'} ] } }
   servingTimes: Array,     // ['08:00', '12:00', '18:00']
   weekStart: String,        // '2025-11-03'
@@ -103,6 +135,9 @@ const props = defineProps({
 })
 
 const form = reactive({
+  tenant_id: props.tenant_id
+    ? props.tenant_id
+    : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null),
   redirect_to: props.redirect_to, // ← ここ重要
 })
 
@@ -139,7 +174,7 @@ const changeWeek = (diff) => {
 const fetchWeekData = (weekStart) => {
   router.get(
     route('menus.weekly'),
-    { weekStart },
+    { weekStart, tenant_id: form.tenant_id},
     {
       preserveState: true, // 他のページ状態は保持
       only: ['menuData','servingTimes'],  // 必要なpropsだけ更新
@@ -155,6 +190,11 @@ const formatDateShort = (dateStr) => dayjs(dateStr).format('MM/DD')
 const weekdayJP = (dateStr) => ['日','月','火','水','木','金','土'][dayjs(dateStr).day()]
 const formatTime = (timeStr) => timeStr ? timeStr.slice(0,5) : ''
 const truncate = (text = '', max = 20) => text.length > max ? text.slice(0,max) + '…' : text
+
+const persistQuery = () => ({
+  tenant_id: form.tenant_id,
+
+})
 </script>
 
 <style scoped>

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\TemperatureLog;
 use App\Models\Sensor;
 use App\Models\Device;
+use App\Models\Menu;
 use Illuminate\Support\Facades\Log;
 use App\Http\Resources\TemperatureLogResource;
 use Carbon\Carbon;
@@ -58,18 +59,18 @@ class TemperatureLogController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($dateType === 'serving_date') {
-
-            $query->whereBetween(
-                'menus.serving_date',
-                [$from, $to ?? Carbon::parse('2999-12-31')]
-            );
-
+            $query->whereHas('menu', function ($q) use ($from, $to) {
+                $q->when($from, fn($q) => $q->where('serving_date', '>=', $from))
+                ->when($to, fn($q) => $q->where('serving_date', '<=', $to));
+            });
+        } elseif ($dateType === 'cooking_date') { 
+            $query->whereHas('menu', function ($q) use ($from, $to) {
+                $q->when($from, fn($q) => $q->where('cooking_date', '>=', $from))
+                ->when($to, fn($q) => $q->where('cooking_date', '<=', $to));
+            });
         } else {
-
-            $query->whereBetween(
-                'temperature_logs.created_at',
-                [$from, $to ?? Carbon::parse('2999-12-31')]
-            );
+            $query->when($from, fn($q) => $q->whereDate('temperature_logs.created_at', '>=', $from))
+                ->when($to, fn($q) => $q->whereDate('temperature_logs.created_at', '<=', $to));
         }
         /*
         |--------------------------------------------------------------------------
@@ -95,9 +96,48 @@ class TemperatureLogController extends Controller
                 $query->orderBy("temperature_logs.{$sortKey}", $dir);
                 break;
         }
+       /*
+        |--------------------------------------------------------------------------
+        | ソート
+        |--------------------------------------------------------------------------
+        */
+        if (!empty($sortKey)) {
 
-        // 安定ソート
-        //$query->orderByDesc('temperature_logs.id');
+            switch ($sortKey) {
+
+                // 配膳日 + 配膳時間
+                case 'serving_date':
+                    $query->orderBy(
+                        Menu::selectRaw(
+                            "TIMESTAMP(serving_date, COALESCE(serving_time, '00:00:00'))"
+                        )->whereColumn('menus.id', 'temperature_logs.menu_id'),
+                        $dir
+                    );
+                    break;
+
+                // 優先順位：①調理日 → ②調理時間
+                case 'cooking_date':
+                    $query->orderBy(
+                        Menu::selectRaw(
+                            "TIMESTAMP(cooking_date, COALESCE(serving_time, '00:00:00'))"
+                        )->whereColumn('menus.id', 'temperature_logs.menu_id'),
+                        $dir
+                    );
+                    break;
+
+                default:
+                    // 通常カラム
+                    $query->orderBy("temperature_logs.{$sortKey}", $dir);
+                    break;
+            }
+        }
+
+        /**
+         * sortKey があってもなくても
+         * 最後は必ずこれ（安定 & デフォルト）
+         */
+        $query->orderBy('temperature_logs.created_at', 'desc');
+
 
         $logs = $query
             ->with(['menu:id,name', 'process:id,name'])

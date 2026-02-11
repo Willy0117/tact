@@ -34,6 +34,7 @@
             <!--input v-model="form.tenant_id" type="number" :placeholder="t('tenant')" class="border rounded px-3 py-2 w-full" / -->
             <!-- Super Admin のときだけ表示 -->
             <div v-if="tenants && tenants.length">
+              <label class="block mb-1">{{ t('tenant') }}</label>
               <select
                 v-model.number="form.tenant_id"
                 class="border rounded px-3 py-2 w-full"

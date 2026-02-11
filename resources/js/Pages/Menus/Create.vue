@@ -105,6 +105,7 @@ const props = defineProps({
   user: Object,
   menu: Object, // コピー用に渡される場合
   redirect_to: String,
+  tenant_id: String,
 })
 
 const isSuperAdmin = computed(() =>

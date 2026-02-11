@@ -38,7 +38,7 @@
   },
   "logs":{
     "serving_date":"配膳日",
-    "cooking_date": "調理日",
+    "cooking_date": "調理予定日",
     "created_date": "登録日",
     "created_at": "登録日時",
     "updated_at": "更新日時"
