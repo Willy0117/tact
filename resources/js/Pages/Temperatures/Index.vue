@@ -194,13 +194,21 @@
                 : 'border-l-transparent'"
             >
             <td>
-              {{ form.date_type === 'serving'
-                  ? (log.menu
-                      ? dayjs(log.menu.serving_date).format('MM/DD')
-                      : '-')
-                  : dayjs(log.created_at).format('MM/DD')
+              {{
+                form.date_type === 'serving'
+                  ? log.menu?.serving_date
+                    ? dayjs(log.menu.serving_date).format('MM/DD')
+                    : '-'
+                : form.date_type === 'cooking'
+                  ? log.menu?.cooking_date
+                    ? dayjs(log.menu.cooking_date).format('MM/DD')
+                    : '-'
+                : log.created_at
+                  ? dayjs(log.created_at).format('MM/DD')
+                  : '-'
               }}
             </td>
+
             <td>{{ log.menu ? log.menu.name : '-' }}</td>
             <td>{{ log.process ? log.process.name : '-' }}</td>
             <td>{{ log.device ? log.device.name : '-' }}</td>

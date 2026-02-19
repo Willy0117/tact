@@ -367,6 +367,9 @@ class MenuController extends Controller
         $search = $request->input('q');
 
         $menus = Menu::query()
+            ->when(auth()->user()->tenant_id, fn($q, $tenantId) => 
+                $q->where('tenant_id', $tenantId)
+            )
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
             ->orderBy('serving_date', 'desc')
             ->limit(20)

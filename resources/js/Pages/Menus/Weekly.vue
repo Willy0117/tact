@@ -18,7 +18,7 @@
             <select
               v-model.number="form.tenant_id"
               @change="changeWeek(0)"
-              class="border rounded px-3 py-1 text-sm h-8 w-full"
+              class="border rounded px-3 pr-8 py-1 text-sm h-8 w-full"
             >
               <option value="">{{ t('select_tenant') }}</option>
               <option

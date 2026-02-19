@@ -8,9 +8,20 @@
     <div class="flex-1 flex flex-col">
       <!-- ヘッダー -->
       <header class="bg-white shadow flex items-center justify-between px-4 h-16">
+   <!-- 左側：ロゴ＋タイトル -->
+      <div class="flex items-center space-x-3">
+
+        <img
+          src="/images/Stage.png"
+          alt="Stage"
+          class="h-24 w-auto"
+        />
+
         <div v-if="$slots.header" class="text-lg font-semibold">
           <slot name="header" />
         </div>
+
+      </div>
 
         <div class="flex items-center space-x-4 text-sm">
           <div class="relative inline-block text-left">
@@ -70,9 +81,19 @@
     </div>
   </div>
     <!-- footer -->
-    <footer class="border-t text-center text-xs text-gray-400 py-4">
-      &copy {{ t('copyright') }}
-    </footer>  
+  <footer class="border-t text-xs text-gray-400 py-4">
+    <div class="flex items-center justify-center space-x-2">
+      
+      <!-- PNG -->
+      <img src="/images/Tact.png" alt="logo" class="h-5 w-auto" >
+
+      <!-- copyright -->
+      <span>
+        &copy; {{ t('copyright') }} 2025-{{ new Date().getFullYear() }}
+      </span>
+
+    </div>
+  </footer>
   </div>
 </template>
 

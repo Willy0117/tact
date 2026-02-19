@@ -88,7 +88,7 @@
 
   "two factor authentication": "二要素認証",
   "two factor instruction": "二要素認証を有効にしてアカウントのセキュリティを強化します。",
-
+  "profile setting": "プロフィール設定",
   "menu_list": "献立一覧",
   "add_menu": "献立追加",
   "edit_menu": "献立編集",
@@ -195,6 +195,7 @@
   "temperatures": "計測結果",
   "week": "週",
   "remember": "ログイン状態を保持する",
-  "forgot_password": "パスワードをお忘れですか？"
+  "forgot_password": "パスワードをお忘れですか？",
+  "copyright": "Tact Inc."
 }
 

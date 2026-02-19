@@ -167,7 +167,6 @@ const showAccessControl = computed(() => {
           </template>
         </button>
       </div>
-
        <nav class="flex-1 overflow-y-auto px-2 py-4 text-sm">
       <!-- Dashboard -->
       <Link :href="route('dashboard')"
@@ -235,7 +234,7 @@ const showAccessControl = computed(() => {
                   class="flex items-center py-2 px-2 rounded hover:bg-gray-100"
                   :class="isActive('profile.show') ? 'bg-gray-200 font-semibold' : ''">
               <UserIcon class="w-4 h-4 mr-1"/>
-              Profile Settings
+              {{ t('profile setting') }}
             </Link>
             <Link v-if="hasApiFeatures" :href="route('api-tokens.index')"
                   class="flex items-center py-2 px-2 rounded hover:bg-gray-100"

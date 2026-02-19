@@ -197,6 +197,9 @@ class DeviceController extends Controller
         $search = $request->input('q');
 
         $devices = Device::query()
+            ->when(auth()->user()->tenant_id, fn($q, $tenantId) => 
+                $q->where('tenant_id', $tenantId)
+            )
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
             ->orderBy('display_order', 'asc')
             ->limit(20)

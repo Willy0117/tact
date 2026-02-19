@@ -20,11 +20,11 @@ class TemperatureLogController extends Controller
             'tenant_id' => 'required|integer|exists:tenants,id',
             'from'      => 'nullable|date',
             'to'        => 'nullable|date',
-            'date_type' => 'nullable|in:serving_date,cooking_date',
+            'date_type' => 'nullable|in:serving_date,cooking_date,created_date',
             'sort'      => 'nullable|string',
         ]);
 
-        $dateType = $validated['date_type'] ?? 'serving_date';
+        $dateType = $validated['date_type'] ?? '';
 
         // sort=serving_date:asc
         $rawSort = $request->query('sort', "{$dateType}:desc");
@@ -69,8 +69,9 @@ class TemperatureLogController extends Controller
                 ->when($to, fn($q) => $q->where('cooking_date', '<=', $to));
             });
         } else {
+//            $query->whereBetween('temperature_logs.created_at', [$from.' 00:00:00', $to.' 23:59:59']);
             $query->when($from, fn($q) => $q->whereDate('temperature_logs.created_at', '>=', $from))
-                ->when($to, fn($q) => $q->whereDate('temperature_logs.created_at', '<=', $to));
+            ->when($to, fn($q) => $q->whereDate('temperature_logs.created_at', '<=', $to));
         }
         /*
         |--------------------------------------------------------------------------
