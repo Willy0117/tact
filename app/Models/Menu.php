@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Temperature;
 
 class Menu extends Model
 {
@@ -24,6 +25,14 @@ class Menu extends Model
         'cooking_date' => 'date:Y-m-d',
         'serving_time' => 'string', // time型は string として扱う
     ];
+
+    public function temperatures()
+    {
+        return $this->hasMany(Temperature::class);
+    }
+
+
+
     // serving_date を常に Y-m-d 形式で返す
     protected function servingDate(): Attribute
     {
