@@ -99,6 +99,7 @@ Route::get('/', function () {
     ]);
 });
 */
+// routes/web.php or api.php
 Route::post('/locale', function (Request $request) {
     $locale = $request->input('locale', 'en');
     session(['locale' => $locale]);

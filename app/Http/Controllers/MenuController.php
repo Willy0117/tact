@@ -49,12 +49,9 @@ class MenuController extends Controller
         // ソート
         $sortBy = $request->input('sort_by', 'serving_date');
         $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
-        //$query->orderBy($sortBy, $sortDir);
 
         // ページあたり件数
         $perPage = intval($request->input('per_page', 20));
-
-        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
 
         $menus = $query
             ->when(
@@ -67,10 +64,23 @@ class MenuController extends Controller
             ->when($request->serving_date_to, fn($q, $v) => $q->where('serving_date', '<=', $v))
             ->when($request->cooking_date_from, fn($q, $v) => $q->where('cooking_date', '>=', $v))
             ->when($request->cooking_date_to, fn($q, $v) => $q->where('cooking_date', '<=', $v))
-            ->orderBy($sortBy, $sortDir)
-            ->paginate($perPage)
-            ->withQueryString(); // 検索条件をページリンクに保持
 
+            // ▼ ここを修正
+            ->when(
+                in_array($sortBy, ['serving_date', 'cooking_date']),
+                function ($q) use ($sortBy, $sortDir) {
+                    $q->orderBy($sortBy, $sortDir)
+                    ->orderBy('serving_time', $sortDir);
+                },
+                function ($q) use ($sortBy, $sortDir) {
+                    $q->orderBy($sortBy, $sortDir);
+                }
+            )
+
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
         return Inertia::render('Menus/Index', [
             'menus' => $menus,

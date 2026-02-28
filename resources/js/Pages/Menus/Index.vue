@@ -108,9 +108,7 @@
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_date')">{{ t('serving_date') }}
               <span v-if="form.sort_by==='serving_date'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('serving_time')">{{ t('serving_time') }}
-              <span v-if="form.sort_by==='serving_time'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
+            <th class="px-3 py-2">{{ t('serving_time') }}</th>
             <th class="px-3 py-2 cursor-pointer" @click="sortBy('cooking_date')">{{ t('cooking_date') }}
               <span v-if="form.sort_by==='cooking_date'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
             </th>

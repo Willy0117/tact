@@ -64,7 +64,7 @@
 
     </div>
 
-    <div class="dashboard">
+    <div class="mt-6 dashboard">
 
     <div
         v-for="block in blocks"

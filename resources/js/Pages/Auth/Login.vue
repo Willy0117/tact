@@ -33,10 +33,11 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="{{ t('login') }}" />
+    <Head :title="t('login')" />
 
     <AuthenticationCard>
         <template #logo>
+            <img src="/images/Stage.png" alt="App Logo" class="w-24 mx-auto" />
             <!-- AuthenticationCardLogo -->
         </template>
 
@@ -89,5 +90,20 @@ const submit = () => {
                 </PrimaryButton>
             </div>
         </form>
+
+        <footer class="mt-6 border-t text-xs text-gray-400 py-4">
+            <div class="flex items-center justify-center space-x-2">
+            
+            <!-- PNG -->
+            <img src="/images/Tact.png" alt="logo" class="h-5 w-auto" >
+
+            <!-- copyright -->
+            <span>
+                &copy; {{ t('copyright') }} 2025-{{ new Date().getFullYear() }}
+            </span>
+
+            </div>
+        </footer>
+
     </AuthenticationCard>
-</template>
+  </template>
