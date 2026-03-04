@@ -127,6 +127,8 @@ class DashboardController extends Controller
                 continue;
             }
 
+            $okCount = 0; // ← 料理ごとのOK回数
+
             foreach ($log->temperatures as $temp) {
 
                 $value = $temp['value'];
@@ -134,20 +136,22 @@ class DashboardController extends Controller
                 if ($process->name === '冷却') {
 
                     if ($value <= $process->threshold_value) {
-                        $success++;
-                    } else {
-                        $deviation++;
+                        $okCount++;
                     }
 
                 } elseif ($process->name === '加熱') {
 
                     if ($value >= $process->threshold_value) {
-                        $success++;
-                    } else {
-                        $deviation++;
+                        $okCount++;
                     }
                 }
             }
+        }
+
+        if ($okCount > 2) {
+            $success++;      // ○
+        } else {
+            $deviation++;    // ✕
         }
 
         return [

@@ -21,8 +21,8 @@ const renderChart = () => {
       datasets: [{
         data: [props.total - props.value,props.value, ],
         backgroundColor: [
-          '#49A6B8', // 青
           '#F4A340', // オレンジ
+          '#49A6B8', // 青
         ],
         borderWidth: 0
       }]

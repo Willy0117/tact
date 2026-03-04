@@ -6,17 +6,17 @@
         <!-- 今日 -->
         <div class="bg-white rounded-xl shadow p-6 text-center">
         <h2 class="text-lg font-semibold mb-4">
-            逸脱データ数（今日）
+            登録データ数（今日）
         </h2>
-        <DonutChart :value="props.today.deviation" :total="props.today.total" />
+        <DonutChart :value="props.today.success" :total="props.today.total" />
         </div>
 
         <!-- 月まとめ -->
         <div class="bg-white rounded-xl shadow p-6 text-center">
         <h2 class="text-lg font-semibold mb-4">
-            逸脱データ数（今月）
+            登録データ数（今月）
         </h2>
-        <DonutChart :value="props.month.deviation" :total="props.month.total" />
+        <DonutChart :value="props.month.success" :total="props.month.total" />
         </div>
 
         <!-- 3つ目（例：累計など） -->
@@ -66,34 +66,32 @@
 
     <div class="mt-6 dashboard">
 
+<template v-for="block in blocks" :key="block.key">
+  <div
+    v-if="groupedMenus[block.key] && groupedMenus[block.key].length !== 0"
+    class="meal-card"
+    :style="{ backgroundColor: block.color }"
+  >
+    <h3 class="text-center">
+      今日の献立（{{ block.label }}）
+    </h3>
+
     <div
-        v-for="block in blocks"
-        :key="block.key"
-        class="meal-card"
-        :style="{ backgroundColor: block.color }"
+      v-for="menu in groupedMenus[block.key]"
+      :key="menu.id"
+      class="menu-row"
     >
-        <h3 class="text-center">今日の献立（{{ block.label }}）</h3>
+      <div class="menu-name">
+        {{ menu.name }}
+      </div>
 
-        <div v-if="groupedMenus[block.key].length === 0">
-        メニューなし
-        </div>
-
-        <div
-        v-for="menu in groupedMenus[block.key]"
-        :key="menu.id"
-        class="menu-row"
-        >
-            <div class="menu-name">
-                {{ menu.name }}
-            </div>
-
-            <div class="counts">
-                🔥 {{ menu.heating_count }}
-                ❄ {{ menu.cooling_count }}
-            </div>
-        </div>
-
+      <div class="counts">
+        🔥 {{ menu.heating_count }}
+        ❄ {{ menu.cooling_count }}
+      </div>
     </div>
+  </div>
+</template>
 
     </div>
 
