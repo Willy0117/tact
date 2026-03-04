@@ -58,26 +58,19 @@ class DashboardController extends Controller
                 'menus.serving_time',
                 'menus.tenant_id',
                 DB::raw("
-                    COALESCE(SUM(
-                        CASE 
-                            WHEN processes.name = '加熱'
-                            THEN JSON_LENGTH(temperature_logs.temperatures)
-                            ELSE 0
-                        END
-                    ),0) as heating_count
+                    COUNT(
+                        CASE WHEN processes.name = '加熱' THEN temperature_logs.id END
+                    ) as heating_count
                 "),
                 DB::raw("
-                    COALESCE(SUM(
-                        CASE 
-                            WHEN processes.name = '冷却'
-                            THEN JSON_LENGTH(temperature_logs.temperatures)
-                            ELSE 0
-                        END
-                    ),0) as cooling_count
+                    COUNT(
+                        CASE WHEN processes.name = '冷却' THEN temperature_logs.id END
+                    ) as cooling_count
                 ")
             )
             ->groupBy('menus.id', 'menus.name', 'menus.serving_time', 'menus.tenant_id')
             ->orderBy('menus.serving_time')
+            ->orderBy('menus.id')
             ->get();
 
         /*
