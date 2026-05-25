@@ -106,7 +106,7 @@ class DeviceController extends Controller
         $user = $request->user();
         
         $validated = $request->validate([
-            'code' => ['nullable', 'string', Rule::unique('devices')],
+            //'code' => ['nullable', 'string', Rule::unique('devices')],
             'name' => ['required', 'string'],
             'process_id' => ['required', 'integer', 'exists:processes,id'],
             'measurement' => ['required', 'boolean'],
@@ -156,7 +156,7 @@ class DeviceController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'code' => ['required', 'string', Rule::unique('devices')->ignore($device->id)],
+            //'code' => ['required', 'string', Rule::unique('devices')->ignore($device->id)],
             'measurement' => ['required', 'boolean'],
             'name' => ['required', 'string'],
             'process_id' => ['required', 'integer', 'exists:processes,id'],

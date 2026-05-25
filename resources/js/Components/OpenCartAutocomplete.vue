@@ -50,7 +50,7 @@ function close() {
 // 入力監視
 watch(keyword, (val) => {
 
-  emit('update:modelValue', null)
+  //emit('update:modelValue', null)
 
   if (timer) clearTimeout(timer)
 
@@ -181,7 +181,7 @@ watch(
         class="w-full border border-gray-300 rounded-md px-3 py-2 pr-8
                focus:outline-none focus:ring-2 focus:ring-blue-500
                transition"
-        @focus="show = true"
+        @focus="items.length && (show = true)"
         @keydown="onKeydown"
       />
 

@@ -242,7 +242,10 @@ const submitForm = () => {
     form,
     {
       preserveState: true,
-      onError: (err) => Object.assign(errors, err),
+      onError: (errs) => {
+        console.log(errs)
+        Object.assign(errors, errs)
+      },
       onSuccess: () => router.get(route('devices.index', props.filters)), // index の検索条件を保持して戻る
     }
   )

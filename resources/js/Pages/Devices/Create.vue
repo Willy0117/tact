@@ -230,7 +230,10 @@ const submit = () => {
   router.post(route('devices.store'), form, {
     preserveState: true,
     onSuccess: () => router.get(route('devices.index', props.filters)), // index の検索条件を保持して戻る
-    onError: (errs) => Object.assign(errors, errs)
+    onError: (errs) => {
+      console.log(errs)
+      Object.assign(errors, errs)
+    }
   })
 }
 </script>
