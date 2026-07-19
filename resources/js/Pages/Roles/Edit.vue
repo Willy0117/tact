@@ -4,89 +4,97 @@
       {{ role ? t('edit_role') : t('create_role') }}
     </template>
 
-    <div class="p-6">
-      <form @submit.prevent="submitForm" class="space-y-6">
-        <!-- Role Name -->
-        <div>
-          <label class="block mb-1 font-medium">{{ t('role_name') }}</label>
-          <input
-            v-model="form.name"
-            type="text"
-            class="border rounded px-3 py-2 w-full"
-            placeholder="Role Name"
-          />
-          <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
-        </div>
+    <div class="p-6 max-w-3xl mx-auto">
+      <div class="bg-white border rounded-lg p-6 space-y-5">
+        <form @submit.prevent="submitForm" class="space-y-5">
 
-        <!-- Permissions MultiSelect -->
-        <div>
-          <label class="block mb-1 font-medium">{{ t('permissions') }}</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-y-auto border rounded p-2">
-            <div v-for="permission in permissions" :key="permission.id" class="mb-2">
-              <label :for="'perm-' + permission.id" class="inline-flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  :id="'perm-' + permission.id"
-                  :value="permission.id"
-                  v-model="form.permissions"
-                  class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                />
-                <span class="text-gray-700">
-                  {{ permission.name }} {{ permission.tenant_label }}
-                </span>
-              </label>
+          <!-- Role Name -->
+          <div class="space-y-1.5">
+            <Label for="name">{{ t('role_name') }}</Label>
+            <Input id="name" v-model="form.name" type="text" placeholder="Role Name" autofocus />
+            <p v-if="errors.name" class="text-sm text-destructive">{{ errors.name }}</p>
+          </div>
+
+          <!-- Permissions MultiSelect -->
+          <div class="space-y-1.5">
+            <Label>{{ t('permissions') }}</Label>
+            <div class="border rounded-lg overflow-hidden">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-y-auto p-3">
+                <label
+                  v-for="permission in permissions"
+                  :key="permission.id"
+                  :for="'perm-' + permission.id"
+                  class="flex items-center gap-2 cursor-pointer"
+                >
+                  <Checkbox
+                    :id="'perm-' + permission.id"
+                    :model-value="form.permissions.includes(permission.id)"
+                    @update:model-value="(checked) => togglePermission(permission.id, checked)"
+                  />
+                  <span class="text-sm">
+                    {{ permission.name }} {{ permission.tenant_label }}
+                  </span>
+                </label>
+              </div>
             </div>
-         </div>
-          <p v-if="errors.permissions" class="text-red-500 text-sm mt-1">{{ errors.permissions }}</p>
-        </div>
+            <p v-if="errors.permissions" class="text-sm text-destructive">{{ errors.permissions }}</p>
+          </div>
 
-        <!-- Buttons -->
-        <div class="flex space-x-2 mt-4">
-          <button
-            type="submit"
-            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            {{ role ? t('update') : t('create') }}
-          </button>
-          <button
-            type="button"
-            @click="router.get(route('roles.index', filters), { preserveState: true })"
-            class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-          >
-            {{ t('cancel') }}
-          </button>
-        </div>
-      </form>
+          <!-- Buttons -->
+          <div class="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" @click="cancel">
+              <X class="w-3.5 h-3.5 mr-1" />{{ t('cancel') }}
+            </Button>
+            <Button type="submit">
+              <Check class="w-3.5 h-3.5 mr-1" />{{ role ? t('update') : t('create') }}
+            </Button>
+          </div>
+
+        </form>
+      </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
-import { router, useForm } from '@inertiajs/vue3'
+import { reactive } from 'vue'
+import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { useI18n } from 'vue-i18n'
+import { Check, X } from '@lucide/vue'
 
-// Props
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+
 const props = defineProps({
-  role: Object,           // null = create, object = edit
-  permissions: Array,     // {id, name, tenant_id, tenant_name?}
-  filters: Object,        // Index画面検索条件
+  role: { type: Object, default: null },
+  permissions: { type: Array, default: () => [] },
+  filters: { type: Object, default: () => ({}) },
 })
 
-// i18n
 const { t } = useI18n()
 
-// 初期フォーム値
 const form = reactive({
   name: props.role?.name || '',
   permissions: props.role?.permissions?.map(p => p.id) || [],
 })
 
-// エラー管理
 const errors = reactive({})
 
-// 送信処理
+const togglePermission = (id, checked) => {
+  if (checked) {
+    if (!form.permissions.includes(id)) form.permissions.push(id)
+  } else {
+    form.permissions = form.permissions.filter(i => i !== id)
+  }
+}
+
+const cancel = () => {
+  router.get(route('roles.index', props.filters), { preserveState: true })
+}
+
 const submitForm = () => {
   const method = props.role ? 'put' : 'post'
   const url = props.role
@@ -100,4 +108,3 @@ const submitForm = () => {
   })
 }
 </script>
-

@@ -22,25 +22,25 @@ class RoleController extends Controller
         }
 
         // 検索
-        if ($request->filled('search')) {
-            $query->where('name', 'like', "%{$request->search}%");
+        if ($request->filled('name')) {
+            $query->where('name', 'like', "%{$request->name}%");
         }
 
-        // ソート・ページング（既存のフィルタ名に合わせる）
+        // ソート・ページング
         $sortField = $request->get('sort', 'id');
-        $sortOrder = $request->get('order', 'desc');
+        $sortOrder = $request->get('direction', 'asc');
 
         $roles = $query->orderBy($sortField, $sortOrder)
-                       ->paginate($request->get('per_page', 10))
+                       ->paginate($request->get('per_page', 20))
                        ->withQueryString();
 
         return Inertia::render('Roles/Index', [
             'roles' => $roles,
-            'filters' => $request->only(['search', 'per_page', 'sort', 'order']),
+            'filters' => $request->only(['name', 'per_page', 'sort', 'direction']),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $user = Auth::user();
 
@@ -48,11 +48,14 @@ class RoleController extends Controller
             ? Permission::all()
             : Permission::where('tenant_id', $user->tenant_id)->orWhereNull('tenant_id')->get();
 
-        // Super Admin がテナントを選べるよう tenants は必要なら追加して渡してください（既にある構成に合わせて）
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
+
         return Inertia::render('Roles/Edit', [
             'role' => null,
             'permissions' => $permissions,
+            'tenants' => $tenants,
             'user' => $user,
+            'filters' => $request->all(),
         ]);
     }
 
@@ -79,10 +82,11 @@ class RoleController extends Controller
             $role->syncPermissions($request->permissions);
         }
 
-        return redirect()->route('roles.index')->with('success', __('Role created successfully.'));
+        return redirect()->route('roles.index', $request->filters ?? [])
+            ->with('success', __('Role created successfully.'));
     }
 
-    public function edit(Role $role)
+    public function edit(Request $request, Role $role)
     {
         $user = Auth::user();
 
@@ -104,12 +108,16 @@ class RoleController extends Controller
             ];
         });
 
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
+
         $role->load('permissions');
 
         return Inertia::render('Roles/Edit', [
             'role' => $role,
             'permissions' => $permissions,
+            'tenants' => $tenants,
             'user' => $user,
+            'filters' => $request->all(),
         ]);
     }
 
@@ -117,23 +125,22 @@ class RoleController extends Controller
     {
         $user = Auth::user();
 
-        // Tenant Admin は自テナント Role のみ編集可能
         if (! $user->hasRole('Super Admin') && $role->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
-        // バリデーション
         $request->validate([
             'name' => 'required|string|max:255|unique:roles,name,' . $role->id . ',id,tenant_id,' . ($role->tenant_id ?? 'NULL'),
             'permissions' => 'array',
         ]);
 
-        // Role 名更新
-        $role->update([
-            'name' => $request->name,
-        ]);
+        // Super Adminはtenant_idの変更も許可
+        $updateData = ['name' => $request->name];
+        if ($user->hasRole('Super Admin') && $request->has('tenant_id')) {
+            $updateData['tenant_id'] = $request->tenant_id ?: null;
+        }
+        $role->update($updateData);
 
-        // Tenant Admin は自テナント Permission のみ同期
         $permissions = $request->permissions ?? [];
         if (! $user->hasRole('Super Admin')) {
             $permissions = Permission::whereIn('id', $permissions)
@@ -144,10 +151,11 @@ class RoleController extends Controller
 
         $role->syncPermissions($permissions);
 
-        return redirect()->route('roles.index')->with('success', __('Role updated successfully.'));
+        return redirect()->route('roles.index', $request->filters ?? [])
+            ->with('success', __('Role updated successfully.'));
     }
 
-    public function destroy(Role $role)
+    public function destroy(Request $request, Role $role)
     {
         $user = Auth::user();
 
@@ -157,7 +165,8 @@ class RoleController extends Controller
 
         $role->delete();
 
-        return redirect()->route('roles.index')->with('success', __('Role deleted successfully.'));
+        return redirect()->route('roles.index', $request->all())
+            ->with('success', __('Role deleted successfully.'));
     }
 
     public function bulkDelete(Request $request)
@@ -172,7 +181,7 @@ class RoleController extends Controller
 
         $roles->delete();
 
-        return redirect()->route('roles.index')
-                         ->with('success', __('Selected roles deleted successfully.'));
+        return redirect()->route('roles.index', $request->except('ids'))
+            ->with('success', __('Selected roles deleted successfully.'));
     }
 }

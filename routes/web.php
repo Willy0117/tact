@@ -35,13 +35,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('permissions', \App\Http\Controllers\PermissionController::class);
     Route::post('permissions/bulk-delete', [\App\Http\Controllers\PermissionController::class, 'bulkDelete'])->name('permissions.bulkDelete');
 
+    Route::get('/temperatures/by-serving-date', [\App\Http\Controllers\TemperatureController::class, 'byServingDate'])->name('temperatures.by-serving-date');
+
+    Route::get('/temperatures/by-cooking-date', [\App\Http\Controllers\TemperatureController::class, 'byCookingDate'])->name('temperatures.by-cooking-date');
+
     Route::resource('temperatures', \App\Http\Controllers\TemperatureController::class);
     Route::put('temperatures/{temperature}/note',[\App\Http\Controllers\TemperatureController::class, 'updateNote'])->name('temperatures.updateNote');
         // autocomplete用（Ajax）
+    Route::get('/menus/autocomplete/{menu}', [\App\Http\Controllers\MenuController::class, 'autocompleteShow'])->name('autocomplete.show');
     Route::get('/menus/autocomplete', [\App\Http\Controllers\MenuController::class, 'autocomplete']);
+
+    Route::get('/sensors/autocomplete/{sensor}', [\App\Http\Controllers\SensorController::class, 'autocompleteShow'])->name('autocomplete.show');
     Route::get('/sensors/autocomplete', [\App\Http\Controllers\SensorController::class, 'autocomplete']);
+
+    Route::get('/devices/autocomplete/{device}', [\App\Http\Controllers\DeviceController::class, 'autocompleteShow'])->name('autocomplete.show');
     Route::get('/devices/autocomplete', [\App\Http\Controllers\DeviceController::class, 'autocomplete']);
+
+    Route::get('/operators/autocomplete/{operator}', [\App\Http\Controllers\OperatorController::class, 'autocompleteShow'])->name('autocomplete.show');
     Route::get('/operators/autocomplete', [\App\Http\Controllers\OperatorController::class, 'autocomplete']);
+
+    Route::get('/processes/autocomplete/{process}', [\App\Http\Controllers\ProcessController::class, 'autocompleteShow'])->name('autocomplete.show');
     Route::get('/processes/autocomplete', [\App\Http\Controllers\ProcessController::class, 'autocomplete']);
 
     Route::get('/processes/by-tenant', [\App\Http\Controllers\ProcessController::class, 'byTenant'])->name('processes.byTenant');

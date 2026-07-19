@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
 use App\Models\Tenant;
-use App\Models\User; // ← これを追加！
 
 class OperatorController extends Controller
 {
@@ -15,70 +14,68 @@ class OperatorController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         $query = Operator::query();
-        // テナント絞り込み（Super Admin は全件表示）
+
         if (!$user->hasRole('Super Admin')) {
             $query->where('tenant_id', $user->tenant_id);
         }
 
-        // 個別検索
-        if ($code = $request->input('code')) {
-            $query->where('code', 'like', "%{$code}%");
-        }
-        if ($name = $request->input('name')) {
-            $query->where('name', 'like', "%{$name}%");
-        }
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        // ソート
-        $sortBy = $request->input('sort_by', 'id');
-        $sortDir = $request->input('sort_dir', 'asc');
-        $query->orderBy($sortBy, $sortDir);
-
-        // ページあたり件数
-        $perPage = intval($request->input('per_page', 20));
-
-        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+        // 有効/無効フィルタ（デフォルトは「有効のみ」）
+        $status = $request->input('status', 'enabled');
 
         $operators = $query
             ->when(
-                $request->tenant > 0,
+                $user->hasRole('Super Admin') && $request->tenant,
                 fn ($q) => $q->where('tenant_id', $request->tenant)
             )
-            ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
-            ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
+            ->when($status === 'enabled', fn ($q) => $q->where('disabled', 0))
+            ->when($status === 'disabled', fn ($q) => $q->where('disabled', 1))
+            ->when($request->code, fn($q, $v) => $q->where('code', 'like', "%$v%"))
+            ->when($request->name, fn($q, $v) => $q->where('name', 'like', "%$v%"))
             ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
-            ->paginate($perPage)
-            ->withQueryString(); // 検索条件をページリンクに保持
-
+            ->paginate(intval($request->input('per_page', 20)))
+            ->withQueryString();
 
         return Inertia::render('Operators/Index', [
             'operators' => $operators,
             'tenants' => $tenants,
-            'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['code','name','per_page','sort_by','sort_dir']),
+            'user' => $user,
+            'filters' => $request->only(['tenant', 'code', 'name', 'status', 'per_page', 'sort_by', 'sort_dir']),
         ]);
     }
 
-    // Create 画面
+    // Create画面（Editと共用）
     public function create(Request $request)
     {
-        $operator = null;
-
         $user = auth()->user()->load('roles');
 
-        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        // コピー用モードの場合
-        if ($request->input('mode') === 'copy' && $operator_id = $request->input('operator_id')) {
-            $operator = Operator::find($operator_id);
+        $operator = null;
+
+        // コピー用モードの場合、idを除いたデータを渡す（新規作成扱いにするため）
+        if ($request->input('mode') === 'copy' && $operatorId = $request->input('operator_id')) {
+            $original = Operator::find($operatorId);
+            if ($original) {
+                $operator = [
+                    'id' => null,
+                    'code' => $original->code,
+                    'name' => $original->name,
+                    'disabled' => $original->disabled,
+                    'display_order' => $original->display_order,
+                    'tenant_id' => $original->tenant_id,
+                ];
+            }
         }
 
-        return Inertia::render('Operators/Create', [
-            'filters' => $request->only(['code','name','per_page','sort_by','sort_dir','page']),
-            'operator' => $operator, // コピー元のデータを渡す
+        return Inertia::render('Operators/Edit', [
+            'filters' => $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'operator' => $operator,
             'tenants' => $tenants,
-            'user' => $user, // Vue 側で判定に必要
+            'user' => $user,
         ]);
     }
 
@@ -91,21 +88,21 @@ class OperatorController extends Controller
             'name' => ['required', 'string'],
             'disabled' => ['required', 'integer'],
             'display_order' => ['required', 'integer'],
-            'tenant_id' => ['nullable', 'exists:tenants,id'], 
+            'tenant_id' => ['nullable', 'exists:tenants,id'],
         ], [
             'code.required' => __('validation.required', ['attribute' => __('Code')]),
             'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
             'name.required' => __('validation.required', ['attribute' => __('Name')]),
             'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
-        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
-        $validated['tenant_id'] = $user->hasRole('Super Admin') 
-            ? $validated['tenant_id'] 
+
+        $validated['tenant_id'] = $user->hasRole('Super Admin')
+            ? $validated['tenant_id']
             : $user->tenant_id;
 
         Operator::create($validated);
 
-        return redirect()->route('operators.index', $request->only(['code','name','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('operators.index', $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']))
             ->with('success', __('operator has been created.'));
     }
 
@@ -113,13 +110,13 @@ class OperatorController extends Controller
     {
         $user = $request->user();
 
-        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];                     
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
         return Inertia::render('Operators/Edit', [
             'operator' => $operator,
             'tenants' => $tenants,
-            'user' => $user, // Vue 側で判定に必要
-            'filters' => $request->only(['code','name','per_page','sort_by','sort_dir','page'])
+            'user' => $user,
+            'filters' => $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']),
         ]);
     }
 
@@ -132,7 +129,7 @@ class OperatorController extends Controller
             'name' => ['required', 'string'],
             'disabled' => ['required', 'integer'],
             'display_order' => ['required', 'integer'],
-            'tenant_id' => ['nullable', 'exists:tenants,id'], 
+            'tenant_id' => ['nullable', 'exists:tenants,id'],
         ], [
             'code.required' => __('validation.required', ['attribute' => __('Code')]),
             'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
@@ -140,26 +137,28 @@ class OperatorController extends Controller
             'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
 
-        $validated['tenant_id'] = $user->hasRole('Super Admin') 
-            ? $validated['tenant_id'] 
+        $validated['tenant_id'] = $user->hasRole('Super Admin')
+            ? $validated['tenant_id']
             : $user->tenant_id;
 
         $operator->update($validated);
 
-        return redirect()->route('operators.index', $request->only(['code','name','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('operators.index', $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']))
             ->with('success', __('operator has been updated.'));
     }
 
-    public function destroy(Operator $operator)
+    public function destroy(Request $request, Operator $operator)
     {
         $operator->delete();
-        return redirect()->route('operators.index')->with('success', __('operator has been deleted.'));
+        return redirect()->route('operators.index', $request->all())
+            ->with('success', __('operator has been deleted.'));
     }
 
     public function bulkDelete(Request $request)
     {
         Operator::whereIn('id', $request->ids)->delete();
-        return redirect()->route('operators.index')->with('success', __('Selected operators have been deleted.'));
+        return redirect()->route('operators.index', $request->except('ids'))
+            ->with('success', __('Selected operators have been deleted.'));
     }
 
     public function autocomplete(Request $request)
@@ -167,7 +166,7 @@ class OperatorController extends Controller
         $search = $request->input('q');
 
         $operators = Operator::query()
-            ->when(auth()->user()->tenant_id, fn($q, $tenantId) => 
+            ->when(auth()->user()->tenant_id, fn($q, $tenantId) =>
                 $q->where('tenant_id', $tenantId)
             )
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
@@ -176,20 +175,28 @@ class OperatorController extends Controller
             ->get()
             ->map(fn($m) => [
                 'id' => $m->id,
-                'label' => "{$m->name} ({$m->code})"
+                'name' => $m->name,
+                'label' => "{$m->name} ({$m->code})",
             ]);
 
         return response()->json($operators);
     }
 
-    // API Real Check
+    public function autocompleteShow(Operator $operator)
+    {
+        return response()->json([
+            'id' => $operator->id,
+            'name' => $operator->name,
+            'label' => "{$operator->name} ({$operator->code})",
+        ]);
+    }
+
     public function checkCode(Request $request)
     {
         $exists = Operator::where('code', $request->code)
-            ->when($request->id, fn($q) => $q->where('id','!=',$request->id))
+            ->when($request->id, fn($q) => $q->where('id', '!=', $request->id))
             ->exists();
 
         return response()->json(['exists' => $exists]);
     }
-
 }

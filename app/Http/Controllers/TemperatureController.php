@@ -168,6 +168,146 @@ class TemperatureController extends Controller
     }
 
 
+
+    
+    public function byServingDate(Request $request)
+    {
+        return $this->indexByDate($request, 'serving');
+    }
+
+    public function byCookingDate(Request $request)
+    {
+        return $this->indexByDate($request, 'cooking');
+    }
+
+    private function indexByDate(Request $request, string $dateType)
+    {
+        $user = $request->user();
+        $query = Temperature::query();
+
+        // テナント制限
+        if (! $user->hasRole('Super Admin')) {
+            $query->where('tenant_id', $user->tenant_id);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 検索条件（URLクエリから取得）
+        |--------------------------------------------------------------------------
+        */
+        $menuId     = $request->query('menu_id');
+        $sensorId   = $request->query('sensor_id');
+        $deviceId   = $request->query('device_id');
+        $operatorId = $request->query('operator_id');
+        $handyNo    = $request->query('handy_no');
+        $processId  = $request->query('process_id');
+
+        if ($menuId) {
+            $query->where('menu_id', $menuId);
+        }
+        if ($sensorId) {
+            $query->where('sensor_id', $sensorId);
+        }
+        if ($deviceId) {
+            $query->where('device_id', $deviceId);
+        }
+        if ($operatorId) {
+            $query->where('operator_id', $operatorId);
+        }
+        if ($handyNo) {
+            $query->where('handy_no', $handyNo);
+        }
+        if ($processId) {
+            $query->where('process_id', $processId);
+        }
+
+        // 日付絞り込み（単一日、デフォルトは今日）
+        $date = $request->query('date', Carbon::today()->toDateString());
+        $dateColumn = $dateType === 'serving' ? 'serving_date' : 'cooking_date';
+
+        $query->whereHas('menu', function ($q) use ($dateColumn, $date) {
+            $q->whereDate($dateColumn, $date);
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | ソート
+        |--------------------------------------------------------------------------
+        */
+        $allowedSorts = [
+            'menu_date',
+            'menu_id',
+            'device_id',
+            'sensor_id',
+            'operator_id',
+            'handy_no',
+            'process_id',
+            'created_at',
+        ];
+
+        $sort = $request->query('sort_by', 'created_at');
+        $dir  = $request->query('sort_dir') === 'asc' ? 'asc' : 'desc';
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'created_at';
+        }
+
+        if ($sort === 'menu_date') {
+            $column = $dateType === 'serving' ? 'serving_date' : 'cooking_date';
+            $query->orderBy(
+                Menu::selectRaw("TIMESTAMP({$column}, COALESCE(serving_time, '00:00:00'))")
+                    ->whereColumn('menus.id', 'temperature_logs.menu_id'),
+                $dir
+            );
+            // 安定ソート
+            $query->orderBy('temperature_logs.created_at', 'desc');
+        } else {
+            $query->orderBy($sort, $dir);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ページネーション
+        |--------------------------------------------------------------------------
+        */
+        $perPage = intval($request->query('per_page', 20));
+
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
+
+        $logs = $query
+            ->when(
+                $request->tenant_id > 0,
+                fn ($q) => $q->where('tenant_id', $request->tenant_id)
+            )
+            ->with(['menu', 'sensor', 'device', 'operator', 'process'])
+            ->paginate($perPage)
+            ->withQueryString();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Inertia レンダリング
+        |--------------------------------------------------------------------------
+        */
+        return Inertia::render('Temperatures/ByDate', [
+            'logs' => $logs,
+            'tenants' => $tenants,
+            'user' => $user,
+            'filters' => [
+                'menu_id'     => $menuId,
+                'sensor_id'   => $sensorId,
+                'device_id'   => $deviceId,
+                'operator_id' => $operatorId,
+                'handy_no'    => $handyNo,
+                'process_id'  => $processId,
+                'per_page'    => $perPage,
+                'sort_by'     => $sort,
+                'sort_dir'    => $dir,
+                'date'        => $date,
+            ],
+            'dateType' => $dateType,
+        ]);
+    }
+
     public function edit(Temperature $temperature, Request $request)
     {
         $temperature->load([

@@ -1,182 +1,241 @@
 <template>
   <AppLayout>
     <template #header>{{ t('operator_list') }}</template>
-    <div dir="rtl">
-      <!-- 検索 トリガーボタン -->
-        <div class="relative size-4 ...">
-          <div class="absolute start-0 top-0 size-14 ...">
-              <button
-              @click="openDrawer = true"
-              class="p-2 rounded hover:bg-gray-200 flex items-center justify-center"
-            >
-              <MagnifyingGlassIcon class="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-        </div>
-    </div>
 
-    <div class="p-6">
-      <!-- 右側 Drawer -->
-      <div v-if="openDrawer" class="fixed inset-0 z-40">
-        <!-- 背景オーバーレイ -->
-        <div class="absolute inset-0 bg-black bg-opacity-30" @click="openDrawer = false"></div>
+    <div class="p-6 space-y-4">
 
-        <!-- 右側 Drawer -->
-        <aside
-          class="absolute top-0 right-0 h-full bg-white shadow-lg z-50 flex flex-col transition-all duration-300 overflow-hidden"
-          :style="{ width: openDrawer ? '20rem' : '0rem' }"
-        >      
-          <div class="p-4 flex justify-between items-center border-b">
-            <h2 class="text-lg font-bold">{{ t('search') }}</h2>
-            <button @click="openDrawer = false" class="text-gray-500 hover:text-gray-700">&times;</button>
-          </div>
-
-          <div class="p-4 space-y-3">
-            <!-- 既存 form をそのまま利用 -->
-            <div v-if="tenants && tenants.length">
-              <select
-                v-model.number="form.tenant"
-                :placeholder="t('select_tenant')"
-                class="border rounded px-3 py-2 w-full"
-              >
-                <option value="">{{ t('select_tenant') }}</option>
-                <option
-                  v-for="tenant in tenants"
-                  :key="tenant.id"
-                  :value="tenant.id"
-                >
-                  {{ tenant.name }}
-                </option>
-              </select>
-            </div>
-            <input v-model="form.code" type="text" :placeholder="t('code')" class="border rounded px-3 py-2 w-full" />
-            <input v-model="form.name" type="text" :placeholder="t('name')" class="border rounded px-3 py-2 w-full" />
-
-            <div class="flex justify-end space-x-2 mt-4">
-              <button @click="submitSearch(); openDrawer = false"
-                      class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                {{ t('search') }}
-              </button>
-              <button @click="openDrawer = false"
-                      class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">
-                {{ t('close') }}
-              </button>
-            </div>
-          </div>
-        </aside>
-      </div>       
-
-      <div class="flex flex-wrap md:flex-nowrap md:justify-between mb-4 items-center gap-2">
-
-        <!-- per_page + add -->
+      <!-- ツールバー -->
+      <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2">
-          <select
-            v-model.number="form.per_page"
-            @change="submitSearch"
-            class="border rounded px-3 py-2 w-16 h-10"
-          >
-            <option v-for="n in [10,20,30,50]" :key="n" :value="n">{{ n }}</option>
-          </select>
+          <Select :model-value="String(form.per_page)" @update:modelValue="v => { form.per_page = Number(v); submitSearch() }">
+            <SelectTrigger class="w-20 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="n in [10,20,30,50]" :key="n" :value="String(n)">{{ n }}</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <Link
-            :href="route('operators.create', persistQuery())"
-            class="px-4 h-10 bg-green-500 text-white rounded hover:bg-green-600 flex items-center space-x-1"
-          >
-            <PlusIcon class="w-4 h-4"/>
-            <span>{{ t('add_operator') }}</span>
-          </Link>
+          <Select v-model="form.status" @update:modelValue="submitSearch">
+            <SelectTrigger class="w-28 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{{ t('all') }}</SelectItem>
+              <SelectItem value="enabled">{{ t('enable') }}</SelectItem>
+              <SelectItem value="disabled">{{ t('disable') }}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <template v-if="selectedIds.length > 0">
+            <Button variant="destructive" size="sm" @click="bulkDelete">
+              <Trash2 class="w-3.5 h-3.5 mr-1" />
+              {{ selectedIds.length }}{{ t('delete_selected') }}
+            </Button>
+          </template>
         </div>
 
-        <!-- 複数削除ボタン -->
-        <button
-          @click="bulkDelete"
-          :disabled="selectedIds.length === 0"
-          class="px-4 h-10 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 flex items-center space-x-1"
-        >
-          <TrashIcon class="w-4 h-4"/>
-          <span>{{ t('delete_selected') }}</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <Button size="sm" as-child>
+            <Link :href="route('operators.create', persistQuery())">
+              <Plus class="w-3.5 h-3.5 mr-1" />{{ t('add_operator') }}
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" @click="openDrawer = true">
+            <Filter class="w-3.5 h-3.5 mr-1" />{{ t('search') }}
+          </Button>
+        </div>
       </div>
 
-      <!-- センサー一覧テーブル -->
-      <table class="min-w-full table-auto border-collapse border border-gray-300 text-sm">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="px-3 py-2">
-              <input type="checkbox" :checked="selectAll" @change="toggleSelectAll($event.target.checked)" />
-            </th>
-            <th v-if="isSuperAdmin" class="px-3 py-2 cursor-pointer" @click="sortBy('tenant_id')">{{ t('tenant') }}
-              <span v-if="form.sort_by==='tenant_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>            
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('code')">
-              {{ t('code') }}
-              <span v-if="form.sort_by==='code'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('name')">
-              {{ t('name') }}
-              <span v-if="form.sort_by==='name'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2">{{ t('updated_at') }}</th>
-            <th class="px-3 py-2 text-center">{{ t('disabled') }}</th>
-            <th  class="px-3 py-2 cursor-pointer" @click="sortBy('display_order')">
-              {{ t('display_order') }}
-              <span v-if="form.sort_by==='display_order'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 text-center">{{ t('actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="operator in operators.data" :key="operator.id" class="odd:bg-white even:bg-gray-100">
+      <!-- 検索中バッジ -->
+      <div v-if="hasActiveFilters" class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-muted-foreground">検索条件:</span>
+        <Badge v-if="form.code" variant="secondary" class="gap-1">
+          {{ t('code') }}: {{ form.code }}
+          <button @click="form.code = ''; submitSearch()"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="form.name" variant="secondary" class="gap-1">
+          {{ t('name') }}: {{ form.name }}
+          <button @click="form.name = ''; submitSearch()"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="isSuperAdmin && form.tenant !== 'all'" variant="secondary" class="gap-1">
+          {{ t('tenant') }}: {{ tenants.find(t => String(t.id) === form.tenant)?.name }}
+          <button @click="form.tenant = 'all'; submitSearch()"><X class="w-3 h-3" /></button>
+        </Badge>
+      </div>
 
-            <td class="px-3 py-2">
-              <input type="checkbox" :value="operator.id" v-model="selectedIds" />
-            </td>
-            <td v-if="isSuperAdmin">
-              {{ tenants.find(t => t.id === operator.tenant_id)?.name || '-' }}
-            </td>            
-            <td class="px-3 py-2">{{ operator.code }}</td>
-            <td class="px-3 py-2">{{ operator.name }}</td>
-            <td class="px-3 py-2">{{ operator.updated_at ? dayjs(operator.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}</td>
-            <td class="px-3 py-2 text-center">{{ operator.disabled ? t('enable') : t('disable') }}</td>
-            <td class="px-3 py-2 text-center">{{ operator.display_order }}</td>
-            <td class="px-3 py-2 text-center flex justify-center space-x-1">
-              <button @click="copyoperator(operator.id)" class="text-green-500 hover:text-green-700">
-                <DocumentDuplicateIcon class="w-4 h-4" />
-              </button>
-              <Link :href="route('operators.edit', { operator: operator.id, ...persistQuery() })" class="text-blue-500 hover:text-blue-700">
-                <PencilIcon class="w-4 h-4"/>
-              </Link>
-              <button @click="deleteoperator(operator.id)" class="text-red-500 hover:text-red-700">
-                <TrashIcon class="w-4 h-4"/>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- テーブル -->
+      <div class="border rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-muted border-b-2 border-border">
+            <tr>
+              <th class="px-3 py-2.5 w-8 text-center">
+                <Checkbox :model-value="selectAll" @update:model-value="checked => toggleSelectAll(checked)" />
+              </th>
+              <th v-if="isSuperAdmin" class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('tenant_id')">
+                {{ t('tenant') }}
+                <SortIcon field="tenant_id" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('code')">
+                {{ t('code') }}
+                <SortIcon field="code" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('name')">
+                {{ t('name') }}
+                <SortIcon field="name" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {{ t('updated_at') }}
+              </th>
+              <th class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {{ t('disabled') }}
+              </th>
+              <th class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('display_order')">
+                {{ t('display_order') }}
+                <SortIcon field="display_order" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {{ t('actions') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="operators.data.length === 0">
+              <td :colspan="isSuperAdmin ? 7 : 6" class="px-3 py-12 text-center text-muted-foreground">
+                <Users class="w-8 h-8 mx-auto mb-2 opacity-30" />
+                {{ t('no_results') }}
+              </td>
+            </tr>
+            <tr
+              v-for="operator in operators.data"
+              :key="operator.id"
+              class="odd:bg-white even:bg-muted/30 hover:bg-muted/50 transition-colors border-b"
+            >
+              <td class="px-3 py-2.5 text-center">
+                <Checkbox
+                  :model-value="selectedIds.includes(operator.id)"
+                  @update:model-value="(checked) => toggleSelect(operator.id, checked)"
+                />
+              </td>
+              <td v-if="isSuperAdmin" class="px-3 py-2.5 text-sm text-muted-foreground">
+                {{ tenants.find(t => t.id === operator.tenant_id)?.name || '-' }}
+              </td>
+              <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ operator.code }}</td>
+              <td class="px-3 py-2.5 font-medium">{{ operator.name }}</td>
+              <td class="px-3 py-2.5 text-sm text-muted-foreground">
+                {{ operator.updated_at ? dayjs(operator.updated_at).format('YYYY/MM/DD HH:mm:ss') : '' }}
+              </td>
+              <td class="px-3 py-2.5 text-center">
+                <Badge :variant="operator.disabled ? 'outline' : 'secondary'">
+                  {{ operator.disabled ? t('disable') : t('enable') }}
+                </Badge>
+              </td>
+              <td class="px-3 py-2.5 text-center text-sm text-muted-foreground">{{ operator.display_order }}</td>
+              <td class="px-3 py-2.5">
+                <div class="flex items-center justify-center gap-1">
+                  <Button variant="ghost" size="icon" class="h-7 w-7" @click="copyOperator(operator.id)">
+                    <Copy class="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" class="h-7 w-7 text-blue-600" as-child>
+                    <Link :href="route('operators.edit', { operator: operator.id, ...persistQuery() })">
+                      <Pencil class="w-3.5 h-3.5" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-7 w-7 text-destructive hover:text-destructive"
+                    @click="deleteOperator(operator.id)"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- ページネーション -->
-      <Pagination :paginator="operators" :onPageChange="goPage" :startItem="startItem" :endItem="endItem"/>
+      <div class="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{{ startItem }}〜{{ endItem }} 件 / 全{{ operators.total }}件</span>
+        <Pagination :paginator="operators" :onPageChange="goPage" />
+      </div>
     </div>
+
+    <!-- ========== 検索 Drawer ========== -->
+    <Teleport to="body">
+      <div v-if="openDrawer" class="fixed inset-0 z-40">
+        <div class="absolute inset-0 bg-black/30" @click="openDrawer = false" />
+        <aside class="absolute top-0 right-0 h-full w-80 bg-white shadow-xl z-50 flex flex-col">
+          <div class="flex items-center justify-between px-5 py-4 border-b">
+            <h2 class="font-bold">{{ t('search') }}</h2>
+            <Button variant="ghost" size="icon" @click="openDrawer = false">
+              <X class="w-4 h-4" />
+            </Button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-5 space-y-4">
+            <div v-if="isSuperAdmin" class="space-y-1.5">
+              <Label>{{ t('tenant') }}</Label>
+              <Select v-model="form.tenant">
+                <SelectTrigger><SelectValue :placeholder="t('select_tenant')" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{{ t('select_tenant') }}</SelectItem>
+                  <SelectItem v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)">
+                    {{ tenant.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="space-y-1.5">
+              <Label>{{ t('code') }}</Label>
+              <Input v-model="form.code" :placeholder="t('code')" />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label>{{ t('name') }}</Label>
+              <Input v-model="form.name" :placeholder="t('name')" />
+            </div>
+          </div>
+          <div class="px-5 py-4 border-t flex gap-2">
+            <Button class="flex-1" @click="submitSearch(); openDrawer = false">
+              <Search class="w-3.5 h-3.5 mr-1" />{{ t('search') }}
+            </Button>
+            <Button variant="outline" @click="resetSearch">{{ t('reset') }}</Button>
+          </div>
+        </aside>
+      </div>
+    </Teleport>
   </AppLayout>
 </template>
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
+import SortIcon from '@/Components/SortIcon.vue'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 import { Link, router } from '@inertiajs/vue3'
-import { ref, reactive, computed, watch} from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, DocumentDuplicateIcon} from '@heroicons/vue/24/outline'
+import { Plus, Pencil, Trash2, Copy, Search, Filter, X, Users } from '@lucide/vue'
 
 const props = defineProps({
   operators: Object,
-  tenants: Array, // Super Admin 用
-  user: Object,   // ← これが必要  
+  tenants: { type: Array, default: () => [] },
+  user: { type: Object, default: null },
   filters: {
     type: Object,
     default: () => ({
-      code: '', name: '', tenant: '',
+      code: '', name: '', tenant: '', status: 'enabled',
       per_page: 20, sort_by: 'id', sort_dir: 'desc', page: 1
     })
   }
@@ -187,20 +246,32 @@ const { t } = useI18n()
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
-// 検索フォーム・per_page・sort・sort_dirを reactive で管理
+
 const openDrawer = ref(false)
 
-// 複数検索用に reactive 拡張
 const form = reactive({
-  tenant: props.filters.tenant,
-  code: props.filters.code,
-  name: props.filters.name,
+  tenant: props.filters.tenant ? String(props.filters.tenant) : 'all',
+  code: props.filters.code || '',
+  name: props.filters.name || '',
+  status: props.filters.status || 'enabled',
   per_page: props.filters.per_page || 20,
-  sort_by: props.filters.sort_by,
-  sort_dir: props.filters.sort_dir,
+  sort_by: props.filters.sort_by || 'id',
+  sort_dir: props.filters.sort_dir || 'desc',
 })
-// 選択削除
+
+const hasActiveFilters = computed(() =>
+  form.code || form.name || (isSuperAdmin.value && form.tenant !== 'all')
+)
+
 const selectedIds = ref([])
+
+const toggleSelect = (id, checked) => {
+  if (checked) {
+    if (!selectedIds.value.includes(id)) selectedIds.value.push(id)
+  } else {
+    selectedIds.value = selectedIds.value.filter(i => i !== id)
+  }
+}
 
 const toggleSelectAll = (checked) => {
   selectedIds.value = checked ? props.operators.data.map(s => s.id) : []
@@ -210,22 +281,19 @@ const resetSelectedIds = () => {
   selectedIds.value = []
 }
 
-const selectAll = computed({
-  get() {
-    return selectedIds.value.length === props.operators.data.length
-  }
-})
+const selectAll = computed(() =>
+  props.operators.data.length > 0 && selectedIds.value.length === props.operators.data.length
+)
 
 watch(() => props.operators.current_page, () => {
   selectedIds.value = []
 })
 
-
-// persistQueryに各検索項目を追加
 const persistQuery = () => ({
-  tenant: form.tenant,
+  tenant: form.tenant === 'all' ? '' : form.tenant,
   code: form.code,
   name: form.name,
+  status: form.status,
   per_page: form.per_page,
   sort_by: form.sort_by,
   sort_dir: form.sort_dir,
@@ -240,7 +308,14 @@ const submitSearch = () => {
   })
 }
 
-// ページ番号クリック
+const resetSearch = () => {
+  form.tenant = 'all'
+  form.code = ''
+  form.name = ''
+  submitSearch()
+  openDrawer.value = false
+}
+
 const goPage = (page) => {
   router.get(route('operators.index'), { ...persistQuery(), page }, {
     preserveState: true,
@@ -249,24 +324,20 @@ const goPage = (page) => {
   })
 }
 
-// 列ヘッダクリックでソート
 const sortBy = (field) => {
-  if (form.sort_by === field) form.sort_dir = form.sort_dir==='asc'?'desc':'asc'
+  if (form.sort_by === field) form.sort_dir = form.sort_dir === 'asc' ? 'desc' : 'asc'
   else { form.sort_by = field; form.sort_dir = 'desc' }
   submitSearch()
 }
 
-// 行単位削除
-const deleteoperator = (operator_id) => {
+const deleteOperator = (operator_id) => {
   if (!confirm(t('confirm_delete'))) return
   router.delete(route('operators.destroy', operator_id), {
     preserveState: true,
-    onSuccess: () => {
-      router.get(route('operators.index'), { ...persistQuery(), page: props.operators.current_page }, { preserveState: true })
-    }
+    onSuccess: () => submitSearch()
   })
 }
-// 複数削除
+
 const bulkDelete = () => {
   if (!confirm(t('confirm_delete_selected'))) return
   router.post(
@@ -274,21 +345,17 @@ const bulkDelete = () => {
     { ids: selectedIds.value },
     {
       preserveState: true,
-      onSuccess: () => {
-        // 削除後に検索条件・ページを保持して再取得
-        router.get(route('operators.index'), { ...persistQuery(), page: props.operators.current_page }, { preserveState: true })
-      }
+      onSuccess: () => submitSearch()
     }
   )
 }
-// コピー機能追加
-const copyoperator = (operator_id) => {
+
+const copyOperator = (operator_id) => {
   router.get(
     route('operators.create', { ...persistQuery(), mode: 'copy', operator_id })
   )
 }
 
-// 表示件数計算
 const startItem = computed(() => props.operators.per_page * (props.operators.current_page - 1) + 1)
 const endItem = computed(() => Math.min(props.operators.per_page * props.operators.current_page, props.operators.total))
 </script>

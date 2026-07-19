@@ -2,300 +2,280 @@
   <AppLayout>
     <template #header>{{ t('temperature') }}</template>
 
-    <div dir="rtl">
-      <!-- 検索 トリガーボタン -->
-        <div class="relative size-4 ...">
-          <div class="absolute start-0 top-0 size-14 ...">
-              <button
-              @click="openDrawer = !openDrawer"
-              class="p-2 rounded hover:bg-gray-200 flex items-center justify-center"
-            >
-              <FunnelIcon class="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-        </div>
-    </div>
     <div v-if="success" class="mb-4 rounded bg-green-100 px-4 py-2 text-green-800">
       {{ success }}
     </div>
 
     <div class="p-6 space-y-4">
-      <!-- 検索フォーム -->
-      <div v-if="openDrawer" class="grid grid-cols-5 gap-2 items-end">
-     
-          <!-- Menu Autocomplete -->
-          <Autocomplete
-            v-model="form.menu_id"
-            :label="t('dish_name')"
-            :placeholder="t('select.menu')"
-            fetch-url="/menus/autocomplete"
-          />
 
-          <Autocomplete
-            v-model="form.process_id"
-            :label="t('process')"
-            :placeholder="t('select.process')"
-            fetch-url="/processes/autocomplete"
-          />
+      <!-- ツールバー -->
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <Select v-model="form.per_page" @update:modelValue="submitSearch">
+            <SelectTrigger class="w-20 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="n in [10,20,30,50]" :key="n" :value="n">{{ n }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          <Autocomplete
-            v-model="form.sensor_id"
-            :label="t('sensor')"
-            :placeholder="t('select.sensor')"
-            fetch-url="/sensors/autocomplete"
-          />
-
-          <Autocomplete
-            v-model="form.device_id"
-            :label="t('device')"
-            :placeholder="t('select.device')"
-            fetch-url="/devices/autocomplete"
-          />
-
-          <Autocomplete
-            v-model="form.operator_id"
-            :label="t('operator')"
-            :placeholder="t('select.operator')"
-            fetch-url="/operators/autocomplete"
-          />
-
-          <!-- Handy No -->
-          <!-- div>
-            <label class="block text-sm font-medium mb-1">{{ t('handy_no') }}</label>
-            <input type="text" v-model="form.handy_no" placeholder="Handy No" class="border rounded px-3 py-2 w-full"/>
-          </div -->
-      </div>
-      <div class="grid grid-cols-6 gap-2 items-end">
-
-          <!-- 2行目：日付 + 献立日/調理日 + 検索ボタン -->
-          <!-- From日 -->
-          <div class="relative">
-            <label class="block text-sm font-medium mb-1">{{ t('from') }}</label>
-            <div class="relative flex items-center">
-              <input 
-                type="date" 
-                v-model="form.date_from" 
-                class="w-full border rounded px-3 py-2" 
-              />
-            </div>
-          </div>
-
-          <!-- To日 -->
-          <div class="relative">
-            <label class="block text-sm font-medium mb-1">{{ t('to') }}</label>
-            <div class="relative flex items-center">
-              <input 
-                type="date" 
-                v-model="form.date_to" 
-                class="w-full border rounded px-3 py-2" 
-              />
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">{{ t('date_type') }}</label>
-            <select v-model="form.date_type" class="border rounded px-3 py-2 pr-8 appearance-none">
-              <option value="serving">{{ t('logs.serving_date') }}</option>
-              <option value="cooking">{{ t('logs.cooking_date') }}</option>
-              <option value="created">{{ t('logs.created_date') }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">{{ t('page') }}</label>
-            <select
-              v-model.number="form.per_page"
-              @change="submitSearch"
-              class="border rounded px-3 py-2 w-16 h-10"
-            >
-              <option v-for="n in [10,20,30,50]" :key="n" :value="n">{{ n }}</option>
-            </select>
-          </div>
-          <div v-if="isSuperAdmin">
-            <label class="block mb-1">{{ t('tenant') }}</label>
-            <select
-              v-model.number="form.tenant_id"
-              :placeholder="t('select_tenant')"
-              class="border rounded px-3 py-2 w-full"
-            >
-              <option value="">{{ t('select_tenant') }}</option>
-              <option
-                v-for="tenant in tenants"
-                :key="tenant.id"
-                :value="tenant.id"
-              >
-                {{ tenant.name }}
-              </option>
-            </select>
-          </div>  
-          <div class="flex items-center justify-end gap-2">
-            <!-- 検索ボタン -->
-            <button @click="submitSearch" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 whitespace-nowrap">
-              {{ t('search') }}
-            </button>
-            <!-- PDFボタン -->
-            <SecondaryButton @click="exportPdf()" class="p-2" title="PDF出力">
-              <PrinterIcon class="h-5 w-5 text-gray-600" /> 
-            </SecondaryButton>
-          </div>
+        <div class="flex items-center gap-2">
+          <Button variant="outline" size="sm" @click="openDrawer = !openDrawer">
+            <Filter class="w-3.5 h-3.5 mr-1" />{{ t('search') }}
+          </Button>
+          <Button variant="outline" size="sm" @click="exportPdf">
+            <Printer class="w-3.5 h-3.5 mr-1" />PDF
+          </Button>
+        </div>
       </div>
 
-      <!-- ログ一覧テーブル -->
-      <table class="min-w-full table-auto border-collapse border border-gray-300 text-sm">
-        <thead>
-          <tr class="bg-gray-200">
-            <th
-              class="px-3 py-2 cursor-pointer"
-              @click="toggleDateSort"
-            >
-             {{ t(dateTypeKey) }}
-              <span v-if="form.sort_by === 'menu_date'">{{ form.sort_dir === 'asc' ? '▲' : '▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('menu_id')">
-              {{ t('dish_name') }}
-              <span v-if="form.sort_by==='menu_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('process_id')">
-              {{ t('process') }}
-              <span v-if="form.sort_by==='process_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('device_id')">
-              {{ t('device') }}
-              <span v-if="form.sort_by==='device_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('operator_id')">
-              {{ t('operator') }}
-              <span v-if="form.sort_by==='operator_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('sensor_id')">
-              {{ t('sensor') }}
-              <span v-if="form.sort_by==='sensor_id'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <!-- th class="px-3 py-2 cursor-pointer" @click="sortBy('handy_no')">
-              {{ t('handy_no') }}
-              <span v-if="form.sort_by==='handy_no'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th -->
-            <th>
-              {{ t('temperatures') }} (℃)
-            </th>
-            <th class="px-3 py-2 cursor-pointer" @click="sortBy('created_at')">
-              {{ t('logs.created_at') }}
-              <span v-if="form.sort_by==='created_at'">{{ form.sort_dir==='asc'?'▲':'▼' }}</span>
-            </th>
-            <th class="px-3 py-2">{{ t('note') }}</th>
-            <th class="px-3 py-2">{{ t('actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <!-- 検索フォーム（テーブル上部に常時表示、開閉ボタンで隠せる） -->
+      <div v-if="openDrawer" class="border rounded-lg p-4 space-y-4 bg-muted/20">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div class="space-y-1.5">
+            <Label>{{ t('dish_name') }}</Label>
+            <Autocomplete
+              v-model="form.menu_id"
+              v-model:name="formLabels.menu_id"
+              api-url="/menus/autocomplete"
+              :placeholder="t('select.menu')"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('process') }}</Label>
+            <Autocomplete
+              v-model="form.process_id"
+              v-model:name="formLabels.process_id"
+              api-url="/processes/autocomplete"
+              :placeholder="t('select.process')"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('sensor') }}</Label>
+            <Autocomplete
+              v-model="form.sensor_id"
+              v-model:name="formLabels.sensor_id"
+              api-url="/sensors/autocomplete"
+              :placeholder="t('select.sensor')"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('device') }}</Label>
+            <Autocomplete
+              v-model="form.device_id"
+              v-model:name="formLabels.device_id"
+              api-url="/devices/autocomplete"
+              :placeholder="t('select.device')"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('operator') }}</Label>
+            <Autocomplete
+              v-model="form.operator_id"
+              v-model:name="formLabels.operator_id"
+              api-url="/operators/autocomplete"
+              :placeholder="t('select.operator')"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('date_type') }}</Label>
+            <Select v-model="form.date_type">
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="serving">{{ t('logs.serving_date') }}</SelectItem>
+                <SelectItem value="cooking">{{ t('logs.cooking_date') }}</SelectItem>
+                <SelectItem value="created">{{ t('logs.created_date') }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('from') }}</Label>
+            <Input v-model="form.date_from" type="date" />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label>{{ t('to') }}</Label>
+            <Input v-model="form.date_to" type="date" />
+          </div>
+
+          <div v-if="isSuperAdmin" class="space-y-1.5">
+            <Label>{{ t('tenant') }}</Label>
+            <Select v-model="form.tenant_id">
+              <SelectTrigger><SelectValue :placeholder="t('select_tenant')" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{{ t('select_tenant') }}</SelectItem>
+                <SelectItem v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)">
+                  {{ tenant.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <Button size="sm" @click="submitSearch">
+            <Search class="w-3.5 h-3.5 mr-1" />{{ t('search') }}
+          </Button>
+          <Button variant="outline" size="sm" @click="resetSearch">{{ t('reset') }}</Button>
+        </div>
+      </div>
+
+      <!-- 検索中バッジ -->
+      <div v-if="hasActiveFilters" class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-muted-foreground">検索条件:</span>
+        <Badge v-if="form.menu_id" variant="secondary" class="gap-1">
+          {{ t('dish_name') }}: {{ formLabels.menu_id }}
+          <button @click="clearFilter('menu_id')"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="form.process_id" variant="secondary" class="gap-1">
+          {{ t('process') }}: {{ formLabels.process_id }}
+          <button @click="clearFilter('process_id')"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="form.sensor_id" variant="secondary" class="gap-1">
+          {{ t('sensor') }}: {{ formLabels.sensor_id }}
+          <button @click="clearFilter('sensor_id')"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="form.device_id" variant="secondary" class="gap-1">
+          {{ t('device') }}: {{ formLabels.device_id }}
+          <button @click="clearFilter('device_id')"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="form.operator_id" variant="secondary" class="gap-1">
+          {{ t('operator') }}: {{ formLabels.operator_id }}
+          <button @click="clearFilter('operator_id')"><X class="w-3 h-3" /></button>
+        </Badge>
+        <Badge v-if="form.date_from || form.date_to" variant="secondary" class="gap-1">
+          {{ t(dateTypeKey) }}: {{ form.date_from }} 〜 {{ form.date_to }}
+          <button @click="resetDateRange"><X class="w-3 h-3" /></button>
+        </Badge>
+      </div>
+
+      <!-- テーブル -->
+      <div class="border rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-muted border-b-2 border-border">
+            <tr>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="toggleDateSort">
+                {{ t(dateTypeKey) }}
+                <SortIcon field="menu_date" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('menu_id')">
+                {{ t('dish_name') }}
+                <SortIcon field="menu_id" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('process_id')">
+                {{ t('process') }}
+                <SortIcon field="process_id" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('device_id')">
+                {{ t('device') }}
+                <SortIcon field="device_id" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('operator_id')">
+                {{ t('operator') }}
+                <SortIcon field="operator_id" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('sensor_id')">
+                {{ t('sensor') }}
+                <SortIcon field="sensor_id" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {{ t('temperatures') }} (℃)
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer" @click="sortBy('created_at')">
+                {{ t('logs.created_at') }}
+                <SortIcon field="created_at" :current="form.sort_by" :dir="form.sort_dir" />
+              </th>
+              <th class="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('note') }}</th>
+              <th class="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
             <tr
               v-for="log in logs.data"
               :key="log.id"
-              class="odd:bg-white even:bg-gray-100 border-l-4"
-              :class="isUpdated(log)
-                ? 'border-l-orange-400'
-                : 'border-l-transparent'"
+              class="odd:bg-white even:bg-muted/30 hover:bg-muted/50 transition-colors border-b border-l-4"
+              :class="isUpdated(log) ? 'border-l-orange-400' : 'border-l-transparent'"
             >
-            <td>
-              {{
-                form.date_type === 'serving'
-                  ? log.menu?.serving_date
-                    ? dayjs(log.menu.serving_date).format('MM/DD')
-                    : '-'
-                : form.date_type === 'cooking'
-                  ? log.menu?.cooking_date
-                    ? dayjs(log.menu.cooking_date).format('MM/DD')
-                    : '-'
-                : log.created_at
-                  ? dayjs(log.created_at).format('MM/DD')
-                  : '-'
-              }}
-            </td>
-
-            <td>{{ log.menu ? log.menu.name : '-' }}</td>
-            <td>{{ log.process ? log.process.name : '-' }}</td>
-            <td>{{ log.device ? log.device.name : '-' }}</td>
-            <td>{{ log.operator ? log.operator.name : '-' }}</td>
-            <td>{{ log.sensor ? log.sensor.name : '-' }}</td>
-            <!-- td class="mr px-3 py-2">{{ log.handy_no }}</td -->
-            <td>
-              <ul class="temp-grid">
-                <li
-                  v-for="temp in log.temperatures"
-                  :key="temp.recorded_at"
-                >
-                  {{ formatTemp(temp.value) }}
-                </li>
-              </ul>
-            </td>
-            <td class="px-3 py-2">{{ log.created_at ? dayjs(log.created_at).format('MM/DD HH:mm') : '' }}</td>
-            <td class="px-3 py-2">{{ log.note }}</td>
-            <td class="px-3 py-2">
-              <div class="flex justify-center space-x-1">
-                <Link
-                  :href="route('temperatures.edit', {temperature: log.id, ...persistQuery() })"
-                  class="text-blue-500 hover:text-blue-700"
-                >
-                  <PencilIcon class="w-4 h-4"/>
-                </Link>
-                <button
-                  @click="openNote(log)"
-                  class="text-green-500 hover:text-green-700"
-                >
-                  <DocumentPlusIcon class="w-4 h-4"/>
-                </button -->
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <td class="px-3 py-2.5">
+                {{
+                  form.date_type === 'serving'
+                    ? log.menu?.serving_date ? dayjs(log.menu.serving_date).format('MM/DD') : '-'
+                  : form.date_type === 'cooking'
+                    ? log.menu?.cooking_date ? dayjs(log.menu.cooking_date).format('MM/DD') : '-'
+                  : log.created_at ? dayjs(log.created_at).format('MM/DD') : '-'
+                }}
+              </td>
+              <td class="px-3 py-2.5">{{ log.menu ? log.menu.name : '-' }}</td>
+              <td class="px-3 py-2.5">{{ log.process ? log.process.name : '-' }}</td>
+              <td class="px-3 py-2.5">{{ log.device ? log.device.name : '-' }}</td>
+              <td class="px-3 py-2.5">{{ log.operator ? log.operator.name : '-' }}</td>
+              <td class="px-3 py-2.5">{{ log.sensor ? log.sensor.name : '-' }}</td>
+              <td class="px-3 py-2.5">
+                <ul v-if="log.temperatures && log.temperatures.length" class="temp-grid">
+                  <li v-for="temp in log.temperatures" :key="temp.recorded_at">
+                    {{ formatTemp(temp.value) }}
+                  </li>
+                </ul>
+                <span v-else>-</span>
+              </td>
+              <td class="px-3 py-2.5 text-sm text-muted-foreground">
+                {{ log.created_at ? dayjs(log.created_at).format('MM/DD HH:mm') : '' }}
+              </td>
+              <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ log.note }}</td>
+              <td class="px-3 py-2.5">
+                <div class="flex items-center justify-center gap-1">
+                  <Button variant="ghost" size="icon" class="h-7 w-7 text-blue-600" @click="openEdit(log)">
+                    <Pencil class="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- ページネーション -->
-      <Pagination :paginator="logs" :onPageChange="goPage" :startItem="startItem" :endItem="endItem"/>
+      <div class="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{{ startItem }}〜{{ endItem }} 件 / 全{{ logs.total }}件</span>
+        <Pagination :paginator="logs" :onPageChange="goPage" />
+      </div>
     </div>
-    <DialogModal :show="showNoteModal" @close="showNoteModal = false">
-      <template #title>
-        {{ t('note_edit') }}
-      </template>
 
-      <template #content>
-        <textarea
-          v-model="noteValue"
-          rows="4"
-          class="w-full border rounded px-3 py-2"
-          placeholder="メモを入力"
-        />
-      </template>
+    <!-- ========== ノート編集 Dialog ========== -->
+    <TemperatureEditDialog
+      v-model:open="showEditModal"
+      :log="currentLog"
+    />
 
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <SecondaryButton @click="showNoteModal = false">
-            {{ t('cancel') }}
-          </SecondaryButton>
-
-          <PrimaryButton @click="saveNote">
-            {{ t('save') }}
-          </PrimaryButton>
-        </div>
-      </template>
-    </DialogModal>
- 
   </AppLayout>
 </template>
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
+import SortIcon from '@/Components/SortIcon.vue'
 import Autocomplete from '@/Components/Autocomplete.vue'
-import DialogModal from '@/Components/DialogModal.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import TemperatureEditDialog from '@/Components/TemperatureEditDialog.vue'
 
-import { ref, reactive, computed, watch } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+import { ref, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { router,Link } from '@inertiajs/vue3'
+import { router, Link } from '@inertiajs/vue3'
 import dayjs from 'dayjs'
-import axios from 'axios'
-import { PlusIcon, PencilIcon, PrinterIcon, FunnelIcon, MagnifyingGlassIcon, DocumentPlusIcon} from '@heroicons/vue/24/outline'
-
+import { Pencil, Printer, Filter, Search, X } from '@lucide/vue'
 
 const props = defineProps({
   logs: Object,
@@ -304,51 +284,57 @@ const props = defineProps({
   filters: Object,
   success: String,
 })
-console.log(props.logs);
 
 const { t } = useI18n()
 
-const dateTypeKey = computed(() => {
-  return {
-    serving: 'logs.serving_date',
-    cooking: 'logs.cooking_date',
-    created: 'logs.created_date',
-  }[form.date_type] ?? ''
-})
+const dateTypeKey = computed(() => ({
+  serving: 'logs.serving_date',
+  cooking: 'logs.cooking_date',
+  created: 'logs.created_date',
+}[form.date_type] ?? ''))
 
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
-// 検索フォーム・per_page・sort・sort_dirを reactive で管理
-const openDrawer = ref(false)
 
-const isUpdated = (log) => {
-  return log.updated_at && log.created_at !== log.updated_at
-}
+// ← ここが変更点：デフォルトで開いた状態
+const openDrawer = ref(true)
 
-// Form
+const isUpdated = (log) => log.updated_at && log.created_at !== log.updated_at
+
 const form = reactive({
   menu_id: props.filters.menu_id || '',
   sensor_id: props.filters.sensor_id || '',
   device_id: props.filters.device_id || '',
   operator_id: props.filters.operator_id || '',
-  handy_no: props.filters.handy_no || '',
   process_id: props.filters.process_id || '',
   per_page: props.filters.per_page || 20,
-  sort_by: props.filters.sort_by || 'serving_date',
+  sort_by: props.filters.sort_by || 'created_at',
   sort_dir: props.filters.sort_dir || 'desc',
   date_from: props.filters.date_from || '',
   date_to: props.filters.date_to || '',
   date_type: props.filters.date_type || 'serving',
-  tenant_id: props.filters.tenant_id,
+  tenant_id: props.filters.tenant_id ? String(props.filters.tenant_id) : 'all',
 })
-// persistQueryに各検索項目を追加
+
+const formLabels = reactive({
+  menu_id: '',
+  process_id: '',
+  sensor_id: '',
+  device_id: '',
+  operator_id: '',
+})
+
+const hasActiveFilters = computed(() =>
+  form.menu_id || form.process_id || form.sensor_id || form.device_id ||
+  form.operator_id || form.date_from || form.date_to
+)
+
 const persistQuery = () => ({
   menu_id: form.menu_id || '',
   sensor_id: form.sensor_id || '',
   device_id: form.device_id || '',
   operator_id: form.operator_id || '',
-  handy_no: form.handy_no || '',
   process_id: form.process_id || '',
   date_from: form.date_from || '',
   date_to: form.date_to || '',
@@ -356,93 +342,82 @@ const persistQuery = () => ({
   per_page: form.per_page,
   sort_by: form.sort_by,
   sort_dir: form.sort_dir,
-  page: props.current_page || 1,
-  tenant_id: props.tenant_id,
+  page: props.logs.current_page || 1,
+  tenant_id: form.tenant_id === 'all' ? '' : form.tenant_id,
 })
-
 
 const startItem = computed(() => props.logs.per_page * (props.logs.current_page - 1) + 1)
 const endItem = computed(() => Math.min(props.logs.per_page * props.logs.current_page, props.logs.total))
 
-// Search
-const submitSearch = () => { router.get(route('temperatures.index'), {...form,page:1}, {preserveState:true}) }
-const goPage = (page) => { router.get(route('temperatures.index'), {...form,page}, {preserveState:true}) }
+const submitSearch = () => { router.get(route('temperatures.index'), { ...persistQuery(), page: 1 }, { preserveState: true, replace: true }) }
+const goPage = (page) => { router.get(route('temperatures.index'), { ...persistQuery(), page }, { preserveState: true, replace: true }) }
+
+const resetSearch = () => {
+  form.menu_id = ''
+  form.sensor_id = ''
+  form.device_id = ''
+  form.operator_id = ''
+  form.process_id = ''
+  form.date_from = ''
+  form.date_to = ''
+  form.date_type = 'serving'
+  submitSearch()
+}
+
+const resetDateRange = () => {
+  form.date_from = ''
+  form.date_to = ''
+  submitSearch()
+}
+
+const clearFilter = (field) => {
+  form[field] = ''
+  formLabels[field] = ''
+  submitSearch()
+}
 
 const toggleDateSort = () => {
   if (form.sort_by === 'menu_date') {
-    // すでに日付ソート中 → 昇降切り替え
     form.sort_dir = form.sort_dir === 'asc' ? 'desc' : 'asc'
   } else {
-    // 初回クリック → 日付ソート開始
     form.sort_by = 'menu_date'
-    form.sort_dir = 'desc' // 初期は新しい順がおすすめ
+    form.sort_dir = 'desc'
   }
-
-  form.page = 1
   submitSearch()
 }
-// Sort
+
 const sortBy = (field) => {
-  if (form.sort_by===field) form.sort_dir=form.sort_dir==='asc'?'desc':'asc'
-  else { form.sort_by=field; form.sort_dir='desc' }
+  if (form.sort_by === field) form.sort_dir = form.sort_dir === 'asc' ? 'desc' : 'asc'
+  else { form.sort_by = field; form.sort_dir = 'desc' }
   submitSearch()
 }
-// 小数点第一まで
-const formatTemp = (v) => {
-  return v != null ? Number(v).toFixed(1) : '-'
-}
 
-const showNoteModal = ref(false)
+const formatTemp = (v) => v != null ? Number(v).toFixed(1) : '-'
+
+const showEditModal = ref(false)
 const currentLog = ref(null)
-const noteValue = ref('')
-
-const openNote = (log) => {
+const openEdit = (log) => {
   currentLog.value = log
-  noteValue.value = log.note ?? ''
-  showNoteModal.value = true
-}
-
-
-
-const saveNote = () => {
-  router.put(
-    route('temperatures.updateNote', currentLog.value.id),
-    { note: noteValue.value },
-    {
-      preserveScroll: true,
-      onSuccess: () => {
-        // フロント側も即更新（UX向上）
-        currentLog.value.note = noteValue.value
-        showNoteModal.value = false
-      },
-    }
-  )
+  showEditModal.value = true
 }
 
 const exportPdf = () => {
-    // persistQuery() で現在の条件をまるごと取得
-    const query = persistQuery();
-    
-    // PDFにはページネーション(page)や件数(per_page)は不要かもしれないので削除
-    delete query.page;
-    delete query.per_page;
-
-    const params = new URLSearchParams(query).toString();
-    const url = `${route('pdf.temperature')}?${params}`;
-    
-    window.open(url, '_blank');
-};
-
+  const query = persistQuery()
+  delete query.page
+  delete query.per_page
+  const params = new URLSearchParams(query).toString()
+  const url = `${route('pdf.temperature')}?${params}`
+  window.open(url, '_blank')
+}
 </script>
+
 <style>
 .temp-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px 12px; /* 縦 横 */
+  gap: 4px 12px;
   list-style: none;
   padding: 0;
   margin: 0;
 }
 </style>
-
-

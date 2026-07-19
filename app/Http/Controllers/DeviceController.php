@@ -206,11 +206,21 @@ class DeviceController extends Controller
             ->get()
             ->map(fn($m) => [
                 'id' => $m->id,
+                'name' => "{$m->name}",
                 'label' => "{$m->name} ({$m->code})"
             ]);
 
         return response()->json($devices);
     }
+
+    public function autocompleteShow(Device $device)
+    {
+        return response()->json([
+            'id' => $device->id,
+            'name' => $device->name,
+            'label' => "{$device->name} ({$device->code})",
+        ]);
+    }  
 
     // API Real Check
     public function checkCode(Request $request)

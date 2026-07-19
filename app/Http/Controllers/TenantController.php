@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
@@ -26,6 +25,9 @@ class TenantController extends Controller
         if ($phone = $request->input('contact_phone')) {
             $query->where('contact_phone', 'like', "%{$phone}%");
         }
+        if ($address = $request->input('address')) {
+            $query->where('address', 'like', "%{$address}%");
+        }
 
         // ソート
         $sortBy = $request->input('sort_by', 'id');
@@ -39,14 +41,17 @@ class TenantController extends Controller
 
         return Inertia::render('Tenants/Index', [
             'tenants' => $tenants,
-            'filters' => $request->only(['name','contact_email','contact_phone','per_page','sort_by','sort_dir'])
+            'filters' => $request->only(['name', 'contact_email', 'contact_phone', 'address', 'per_page', 'sort_by', 'sort_dir'])
         ]);
     }
 
-    // Create画面
+    // Create画面（Editと共用）
     public function create(Request $request)
     {
-        return Inertia::render('Tenants/Create');
+        return Inertia::render('Tenants/Edit', [
+            'tenant' => null,
+            'filters' => $request->all(),
+        ]);
     }
 
     public function store(Request $request)
@@ -76,18 +81,11 @@ class TenantController extends Controller
 
         // 3️⃣ 権限構成（確定版）
         $permissions = [
-            // 管理設定
             'manage roles' => ['admin'],
             'manage permissions' => ['admin'],
             'manage users' => ['admin'],
-
-            // マスター管理
             'manage masters' => ['admin', 'user'],
-
-            // センサー記録系
             'manage sensor' => ['admin', 'user'],
-
-            // 献立管理
             'manage menus' => ['admin', 'user'],
         ];
 
@@ -107,17 +105,16 @@ class TenantController extends Controller
             }
         }
 
-        return redirect()->route('tenants.index')
+        return redirect()->route('tenants.index', $request->filters ?? [])
             ->with('success', 'Tenant created successfully with roles & permissions.');
     }
-
-
 
     // Edit画面
     public function edit(Request $request, Tenant $tenant)
     {
         return Inertia::render('Tenants/Edit', [
-            'tenant' => $tenant
+            'tenant' => $tenant,
+            'filters' => $request->all(),
         ]);
     }
 
@@ -148,18 +145,11 @@ class TenantController extends Controller
 
         // 3️⃣ 権限構成（storeと同じ）
         $permissions = [
-            // 管理設定
             'manage roles' => ['admin'],
             'manage permissions' => ['admin'],
             'manage users' => ['admin'],
-
-            // マスター管理
             'manage masters' => ['admin', 'user'],
-
-            // センサー記録系
             'manage sensor' => ['admin', 'user'],
-
-            // 献立管理
             'manage menus' => ['admin', 'user'],
         ];
 
@@ -179,24 +169,23 @@ class TenantController extends Controller
             }
         }
 
-        return redirect()->route('tenants.index')
+        return redirect()->route('tenants.index', $request->filters ?? [])
             ->with('success', 'Tenant updated successfully with roles & permissions.');
     }
 
-
-
-
     // 削除
-    public function destroy(Tenant $tenant)
+    public function destroy(Request $request, Tenant $tenant)
     {
         $tenant->delete();
-        return redirect()->route('tenants.index')->with('success', __('Tenant has been deleted.'));
+        return redirect()->route('tenants.index', $request->all())
+            ->with('success', __('Tenant has been deleted.'));
     }
 
     // 複数削除
     public function bulkDelete(Request $request)
     {
         Tenant::whereIn('id', $request->ids)->delete();
-        return redirect()->route('tenants.index')->with('success', __('Selected tenants have been deleted.'));
+        return redirect()->route('tenants.index', $request->except('ids'))
+            ->with('success', __('Selected tenants have been deleted.'));
     }
 }

@@ -371,7 +371,8 @@ class MenuController extends Controller
         ]);
 
     }
-    
+
+
     public function autocomplete(Request $request)
     {
         $search = $request->input('q');
@@ -386,10 +387,20 @@ class MenuController extends Controller
             ->get()
             ->map(fn($m) => [
                 'id' => $m->id,
-                'label' => "{$m->name} ({$m->serving_date})"
+                'name' => $m->name,
+                'label' => "{$m->name} ({$m->serving_date})",
             ]);
 
         return response()->json($menus);
     }
+
+    public function autocompleteShow(Menu $menu)
+    {
+        return response()->json([
+            'id' => $menu->id,
+            'name' => $menu->name,
+            'label' => "{$menu->name} ({$menu->serving_date})",
+        ]);
+    }  
 
 }
