@@ -12,6 +12,7 @@ class SensorController extends Controller
 {
     public function index(Request $request)
     {
+
         $user = $request->user();
 
         $query = Sensor::query();
@@ -73,7 +74,7 @@ class SensorController extends Controller
         }
 
         return Inertia::render('Sensors/Edit', [
-            'filters' => $request->only(['name', 'model', 'serial_number', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'filters' => $request->only(['name', 'model', 'serial_number', 'status', 'tenant_id', 'per_page', 'sort_by', 'sort_dir', 'page']),
             'sensor' => $sensor,
             'tenants' => $tenants,
             'user' => $user,
@@ -108,7 +109,7 @@ class SensorController extends Controller
 
         Sensor::create($validated);
 
-        return redirect()->route('sensors.index', $request->only(['name', 'model', 'serial_number', 'per_page', 'sort_by', 'sort_dir', 'page']))
+        return redirect()->route('sensors.index', $request->input('filters', []))
             ->with('success', __('Sensor has been created.'));
     }
 
@@ -122,7 +123,7 @@ class SensorController extends Controller
             'sensor' => $sensor,
             'tenants' => $tenants,
             'user' => $user,
-            'filters' => $request->only(['name', 'model', 'serial_number', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'filters' => $request->only(['name', 'model', 'serial_number', 'status', 'tenant_id', 'per_page', 'sort_by', 'sort_dir', 'page']),
         ]);
     }
 
@@ -156,7 +157,7 @@ class SensorController extends Controller
 
         $sensor->update($validated);
 
-        return redirect()->route('sensors.index', $request->only(['name', 'model', 'serial_number', 'per_page', 'sort_by', 'sort_dir', 'page']))
+        return redirect()->route('sensors.index', $request->input('filters', []))
             ->with('success', __('Sensor has been updated.'));
     }
 

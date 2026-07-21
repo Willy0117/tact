@@ -1,139 +1,97 @@
 <template>
   <AppLayout>
-    <template #header>{{ t('edit_device') }}</template>
+    <template #header>
+      {{ device ? t('edit_device') : t('add_device') }}
+    </template>
 
-    <div class="p-6">
-      <div class="space-y-4">
-      <form @submit.prevent="submitForm">
-        <!-- Code -->
-        <!-- div>
-          <label class="block mb-1">{{ t('code') }}</label>
-          <input
-            v-model="form.code"
-            @input="form.code = toHalfWidth(form.code)"
-            type="text"
-            placeholder="Code"
-            class="border rounded px-3 py-2 w-full"
-          />
-          <p v-if="errors.code" class="text-red-500 text-sm mt-1">{{ errors.code }}</p>
-        </di -->
+    <div class="p-6 max-w-2xl mx-auto">
+      <div class="bg-white border rounded-lg p-6 space-y-5">
+        <div class="space-y-5">
 
-        <!-- Name -->
-        <div>
-          <label class="block mb-1">{{ t('name') }}</label>
-          <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
-          <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
-        </div>
-        <!-- Tenant 選択 (Super Admin のみ) -->
-        <div v-if="isSuperAdmin" class="mt-4">
-          <label class="block mb-1">{{ t('tenant') }}</label>
-          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
-            <option :value="null">{{ t('select_tenant') }}</option>
-            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.name }}
-            </option>
-          </select>
-        </div>
+          <!-- Name -->
+          <div class="space-y-1.5">
+            <Label for="name">{{ t('name') }}</Label>
+            <Input id="name" v-model="form.name" type="text" autofocus />
+            <p v-if="errors.name" class="text-sm text-destructive">{{ errors.name }}</p>
+          </div>
 
-        <!-- process -->
-        <div>
-          <label class="block">{{ t('process') }}</label>
-          <select v-model="form.process_id" class="mt-1 block w-full">
-            <option :value="null">{{ t('please_select') }}</option>
-            <option
-              v-for="p in processes"
-              :key="p.id"
-              :value="p.id"
-            >
-              {{ p?.name ?? '' }}
-            </option>
-          </select>
-        </div>
+          <!-- Tenant 選択 (Super Admin のみ) -->
+          <div v-if="isSuperAdmin" class="space-y-1.5">
+            <Label for="tenant_id">{{ t('tenant') }}</Label>
+            <Select v-model="form.tenant_id">
+              <SelectTrigger id="tenant_id">
+                <SelectValue :placeholder="t('select_tenant')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)">
+                  {{ tenant.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
+          <!-- Process -->
+          <div class="space-y-1.5">
+            <Label for="process_id">{{ t('process') }}</Label>
+            <Select v-model="form.process_id">
+              <SelectTrigger id="process_id">
+                <SelectValue :placeholder="t('please_select')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="p in processes" :key="p.id" :value="String(p.id)">
+                  {{ p?.name ?? '' }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <label class="block">
-            <span class="block mb-1">{{ t('measurement') }}</span>
-
-            <div class="flex items-center space-x-6 h-10">
-              <label class="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  v-model.number="form.measurement"
-                  :value="1"
-                  class="w-4 h-4"
-                />
-                <span class="ml-2">{{ t('do') }}</span>
+          <!-- Measurement -->
+          <div class="space-y-1.5">
+            <Label>{{ t('measurement') }}</Label>
+            <RadioGroup v-model="form.measurement" class="flex items-center gap-6">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem :value="1" />
+                <span>{{ t('do') }}</span>
               </label>
-
-              <label class="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  v-model.number="form.measurement"
-                  :value="0"
-                  class="w-4 h-4"
-                />
-                <span class="ml-2">{{ t('dont') }}</span>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem :value="0" />
+                <span>{{ t('dont') }}</span>
               </label>
-            </div>
-          </label>
-        </div>
+            </RadioGroup>
+          </div>
 
-        <div>
-          <label class="block">
-            <span class="block mb-1">{{ t('status') }}</span>
-
-            <div class="flex items-center space-x-6 h-10">
-              <label class="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  v-model.number="form.disabled"
-                  :value="1"
-                />
-                <span class="ml-2">{{ t('enable') }}</span>
+          <!-- Disabled -->
+          <div class="space-y-1.5">
+            <Label>{{ t('status') }}</Label>
+            <RadioGroup v-model="form.disabled" class="flex items-center gap-6">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem :value="0" />
+                <span>{{ t('enable') }}</span>
               </label>
-
-              <label class="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  v-model.number="form.disabled"
-                  :value="0"
-                />
-                <span class="ml-2">{{ t('disable') }}</span>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem :value="1" />
+                <span>{{ t('disable') }}</span>
               </label>
-            </div>
-          </label>
+            </RadioGroup>
+          </div>
+
+          <!-- Display Order -->
+          <div class="space-y-1.5">
+            <Label for="display_order">{{ t('display_order') }}</Label>
+            <Input id="display_order" v-model.number="form.display_order" type="number" />
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" @click="cancel">
+              <X class="w-3.5 h-3.5 mr-1" />{{ t('cancel') }}
+            </Button>
+            <Button type="button" @click="submitForm">
+              <Check class="w-3.5 h-3.5 mr-1" />{{ device ? t('update') : t('create') }}
+            </Button>
+          </div>
 
         </div>
-
-
-        <!-- Display Order -->
-        <div class="mb-4">
-          <label class="block mb-1">{{ t('display_order') }}</label>
-          <input
-            v-model.number="form.display_order"
-            type="number"
-            class="border rounded px-3 py-2 w-full"
-          />
-        </div>
-
-        <!-- Buttons -->
-        <div class="flex space-x-2">
-          <button
-            type="submit"
-            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            {{ t('update') }}
-          </button>
-          <button
-            type="button"
-            @click="router.get(route('devices.index'), props.filters, { preserveState: true })"
-            class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-            >
-            {{ t('cancel') }}
-          </button>
-        </div>
-      </form>
       </div>
     </div>
   </AppLayout>
@@ -141,10 +99,25 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, router} from '@inertiajs/vue3'
-import { reactive, ref, watch, onMounted, computed } from 'vue'
+import { router } from '@inertiajs/vue3'
+import { reactive, ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import { Check, X } from '@lucide/vue'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+
+const props = defineProps({
+  filters: { type: Object, default: () => ({}) },
+  tenants: { type: Array, default: () => [] },
+  device: { type: Object, default: null },
+  user: { type: Object, default: null },
+  processes: { type: Array, default: () => [] },
+})
 
 const { t } = useI18n()
 
@@ -152,103 +125,72 @@ const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
 
-// Props に mode と device_id を追加
-const props = defineProps({
-  filters: Object,
-  tenants: Array,      // Super Admin のみ
-  device: Object,
-  user: Object, 
-  processes: Array,
-  mode: { type: String, default: '' }
-})
-
-const processes = ref([...props.processes])
+const processesList = ref([...props.processes])
 
 const form = reactive({
-  code: props.device?.code ?? '',
   name: props.device?.name ?? '',
-  process_id: props.device?.process_id ?? '',
+  process_id: props.device?.process_id ? String(props.device.process_id) : '',
   measurement: props.device?.measurement ?? 1,
-  disabled: props.device?.disabled ?? 1,
+  disabled: props.device?.disabled ?? 0,
   display_order: props.device?.display_order ?? 1,
   tenant_id: props.device?.tenant_id
-    ?? (isSuperAdmin.value ? 1 : props.user.tenant_id),
+    ? String(props.device.tenant_id)
+    : (isSuperAdmin.value ? '' : String(props.user?.tenant_id ?? '')),
 })
+
+const errors = reactive({ name: '' })
 
 let initialLoad = true
 
+// テナント変更時に工程リストを動的に取得
 watch(
   () => form.tenant_id,
   async (tenantId) => {
-
-    // 初期ロード時 & tenant が同じなら props を使う
-    if (tenantId && props.processes.length && tenantId === props.initialTenantId) {
-      processes.value = [...props.processes]
-      return
-    }
-
     if (!tenantId) {
-      processes.value = []
+      processesList.value = []
       return
     }
 
-    const res = await axios.get(
-      route('processes.byTenant'),
-      {
-        params: {
-          tenant: tenantId,
-        },
-      }
-    )
-    console.log(res.data)  
-    processes.value = res.data
-     // tenant が変わった時だけ process_id をリセット
+    // 初期ロード時、元々渡されたテナントと同じなら再取得しない
+    if (initialLoad && props.device?.tenant_id && String(props.device.tenant_id) === tenantId) {
+      processesList.value = [...props.processes]
+      initialLoad = false
+      return
+    }
+
+    const res = await axios.get(route('processes.byTenant'), {
+      params: { tenant: tenantId },
+    })
+    processesList.value = res.data
+
     if (!initialLoad) {
-      form.process_id = null
+      form.process_id = ''
     } else {
       initialLoad = false
     }
-    
   },
   { immediate: true }
 )
 
-// リアルタイム重複チェック
-const errors = reactive({ code: '', name: '', process: '', measurement: '', disabled: '', display_order: '' })
-
-const checkCode = async (code) => {
-  if (!code) { errors.code = ''; return }
-  try {
-    const response = await axios.post(route('devices.checkCode'), { code })
-    errors.code = response.data.exists ? t('code_already_exists') : ''
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-// watch で入力中にもチェック
-watch(() => form.code, (newCode) => checkCode(newCode))
-
-// 全角→半角変換
-const toHalfWidth = (str) => {
-  if (!str) return ''
-  return str.replace(/[！-～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-            .replace(/　/g, ' ') // 全角スペースを半角スペースに
+const cancel = () => {
+  router.get(route('devices.index', props.filters), { preserveState: true })
 }
 
 const submitForm = () => {
-  router.put(
-    route('devices.update', props.device.id), // filters は付けない
-    form,
-    {
-      preserveState: true,
-      onError: (errs) => {
-        console.log(errs)
-        Object.assign(errors, errs)
-      },
-      onSuccess: () => router.get(route('devices.index', props.filters)), // index の検索条件を保持して戻る
-    }
-  )
-}
+  const payload = {
+    ...form,
+    process_id: form.process_id || null,
+    filters: props.filters,
+  }
 
+  if (props.device?.id) {
+    router.put(route('devices.update', props.device.id), payload, {
+      onError: (err) => Object.assign(errors, err),
+    })
+  } else {
+    router.post(route('devices.store'), payload, {
+      onError: (err) => Object.assign(errors, err),
+    })
+  }
+}
 </script>

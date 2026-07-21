@@ -41,7 +41,7 @@ class TenantController extends Controller
 
         return Inertia::render('Tenants/Index', [
             'tenants' => $tenants,
-            'filters' => $request->only(['name', 'contact_email', 'contact_phone', 'address', 'per_page', 'sort_by', 'sort_dir'])
+            'filters' => $request->only(['name', 'contact_email', 'contact_phone', 'address', 'per_page', 'sort_by', 'sort_dir', 'page'])
         ]);
     }
 

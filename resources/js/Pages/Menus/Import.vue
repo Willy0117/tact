@@ -8,7 +8,7 @@
       <div
         @drop.prevent="handleDrop"
         @dragover.prevent
-        class="border-dashed border-2 p-6 rounded text-center cursor-pointer hover:bg-gray-50"
+        class="border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/30 transition-colors"
       >
         <input
           type="file"
@@ -17,49 +17,61 @@
           accept=".xlsx,.xls"
           class="hidden"
         />
-        <p class="text-gray-500">
+        <FileSpreadsheet class="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+        <p class="text-muted-foreground mb-3">
           {{ t('drag_drop_or_click') }}
         </p>
-        <button
-          @click="$refs.fileInput.click()"
-          class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {{ t('select_file') }}
-        </button>
+        <Button @click="$refs.fileInput.click()">
+          <Upload class="w-3.5 h-3.5 mr-1" />{{ t('select_file') }}
+        </Button>
       </div>
 
       <!-- プレビュー表示 -->
-      <div v-if="menusPreview.length">
-        <h2 class="font-semibold mb-2">{{ t('preview') }}</h2>
-        <table border="1">
-            <thead>
-                <tr>
-                <th>食事</th>
-                <th v-for="date in menusTable.dates" :key="date">{{ date }}</th>
-                </tr>
+      <div v-if="menusPreview.length" class="space-y-3">
+        <h2 class="font-semibold">{{ t('preview') }}</h2>
+
+        <div class="border rounded-lg overflow-hidden overflow-x-auto">
+          <table class="w-full border-collapse text-sm">
+            <thead class="bg-muted">
+              <tr>
+                <th class="border-b px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  食事
+                </th>
+                <th
+                  v-for="date in menusTable.dates"
+                  :key="date"
+                  class="border-b px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  {{ date }}
+                </th>
+              </tr>
             </thead>
             <tbody>
-                <tr v-for="row in menusTable.table" :key="row.mealType">
-                <td>{{ row.mealType }}</td>
-                <td v-for="date in menusTable.dates" :key="date">{{ row[date] }}</td>
-                </tr>
+              <tr
+                v-for="row in menusTable.table"
+                :key="row.mealType"
+                class="odd:bg-white even:bg-muted/30 border-b"
+              >
+                <td class="px-3 py-2.5 font-medium">{{ row.mealType }}</td>
+                <td v-for="date in menusTable.dates" :key="date" class="px-3 py-2.5 text-sm text-muted-foreground">
+                  {{ row[date] }}
+                </td>
+              </tr>
             </tbody>
-        </table>
+          </table>
+        </div>
 
-        <button
-          @click="saveMenus"
-          class="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          {{ t('save') }}
-        </button>
+        <Button @click="saveMenus">
+          <Check class="w-3.5 h-3.5 mr-1" />{{ t('save') }}
+        </Button>
       </div>
 
       <!-- 成功 / エラー -->
-      <div v-if="successMessage" class="text-green-600 font-semibold">
-        {{ successMessage }}
+      <div v-if="successMessage" class="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+        <CheckCircle2 class="w-4 h-4" />{{ successMessage }}
       </div>
-      <div v-if="errorMessage" class="text-red-600 font-semibold">
-        {{ errorMessage }}
+      <div v-if="errorMessage" class="flex items-center gap-2 text-sm text-destructive font-medium">
+        <AlertCircle class="w-4 h-4" />{{ errorMessage }}
       </div>
 
     </div>
@@ -68,15 +80,16 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { ref, computed} from 'vue'
+import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
-
 import { useI18n } from 'vue-i18n'
 import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 import axios from 'axios'
+import { Upload, FileSpreadsheet, Check, CheckCircle2, AlertCircle } from '@lucide/vue'
 
-// CSRF Cookie 取得・送信を有効化
+import { Button } from '@/components/ui/button'
+
 axios.defaults.withCredentials = true
 
 const { t } = useI18n()
@@ -88,14 +101,13 @@ const menusPreview = ref([])
 const successMessage = ref('')
 const errorMessage = ref('')
 const isSaving = ref(false)
-// ファイル選択
+
 const handleFile = (event) => {
   file.value = event.target.files[0]
   if (!file.value) return
   parseExcel(file.value)
 }
 
-// Drag & Drop
 const handleDrop = (event) => {
   file.value = event.dataTransfer.files[0]
   if (!file.value) return
@@ -106,17 +118,14 @@ function getBaseYear(sheet) {
   const cell = sheet["C4"];
   if (!cell || cell.v == null) return dayjs().year();
 
-  // C4 は「年」そのもの
   if (typeof cell.v === "number" && cell.v >= 1900 && cell.v <= 2100) {
     return cell.v;
   }
 
-  // 念のため文字列年
   if (typeof cell.v === "string" && /^\d{4}$/.test(cell.v)) {
     return Number(cell.v);
   }
 
-  // フォールバック（使われないはず）
   return dayjs().year();
 }
 
@@ -132,7 +141,6 @@ const menusTable = computed(() => {
       const items = menusPreview.value
         .filter(m => m.serving_date === date && m.serving_time === mealTimeMap(mealType))
         .map(m => {
-          // 調理日を追加
           if (m.cooking_date && m.cooking_date !== m.serving_date) {
             return `${m.name} (${m.cooking_date})`
           }
@@ -165,45 +173,43 @@ function parseExcel(fileObj) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
     console.log("C4:", sheet["C4"])
-console.log("C4.v:", sheet["C4"]?.v, typeof sheet["C4"]?.v)
+    console.log("C4.v:", sheet["C4"]?.v, typeof sheet["C4"]?.v)
 
-console.log("D6:", sheet["D6"])
-console.log("D6.v:", sheet["D6"]?.v, typeof sheet["D6"]?.v)
+    console.log("D6:", sheet["D6"])
+    console.log("D6.v:", sheet["D6"]?.v, typeof sheet["D6"]?.v)
 
     const servingCols = ["D", "M", "V", "AE", "AN", "AW", "BF"];
     const servingDates = {};
 
-const baseYear = sheet["C4"]?.v; // 2025
+    const baseYear = sheet["C4"]?.v;
 
-let year = baseYear;
-let lastMonth = null;
+    let year = baseYear;
+    let lastMonth = null;
 
-servingCols.forEach((col) => {
-  const cell = sheet[`${col}6`];
+    servingCols.forEach((col) => {
+      const cell = sheet[`${col}6`];
 
-  if (!cell || typeof cell.v !== "string") {
-    servingDates[col] = null;
-    return;
-  }
+      if (!cell || typeof cell.v !== "string") {
+        servingDates[col] = null;
+        return;
+      }
 
-  // "12/29(月)" → "12/29"
-  const md = cell.v.replace(/\(.+\)/, "").trim();
-  const [month, day] = md.split("/").map(Number);
+      const md = cell.v.replace(/\(.+\)/, "").trim();
+      const [month, day] = md.split("/").map(Number);
 
-  if (!month || !day) {
-    servingDates[col] = null;
-    return;
-  }
+      if (!month || !day) {
+        servingDates[col] = null;
+        return;
+      }
 
-  // 年跨ぎ（12 → 1）
-  if (lastMonth !== null && month < lastMonth) {
-    year++;
-  }
-  lastMonth = month;
+      if (lastMonth !== null && month < lastMonth) {
+        year++;
+      }
+      lastMonth = month;
 
-  servingDates[col] =
-    `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-});
+      servingDates[col] =
+        `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    });
 
     const cookingMap = {
       D: "K",
@@ -229,7 +235,6 @@ servingCols.forEach((col) => {
         const menuCell = sheet[`${col}${row}`];
         if (!menuCell || !menuCell.v) return;
 
-//        const Name = `${mealType} ${menuCell.v.toString().trim()}`;
         const Name = `${menuCell.v.toString().trim()}`;
         const servingDate = servingDates[col];
         if (!servingDate) return;
@@ -276,11 +281,10 @@ servingCols.forEach((col) => {
   reader.readAsArrayBuffer(fileObj);
 }
 
-// 保存（サーバーに POST）
 async function saveMenus() {
   try {
     const res = await axios.post('/menus/import', { menus: menusPreview.value }, {
-        withCredentials: true, // ← これが重要
+        withCredentials: true,
         headers: { 'Content-Type': 'application/json' }
     })
     alert(res.data.message)
@@ -293,14 +297,4 @@ async function saveMenus() {
   }
 
 }
-
 </script>
-
-
-
-
-
-
-
-
-

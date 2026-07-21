@@ -36,7 +36,7 @@ class RoleController extends Controller
 
         return Inertia::render('Roles/Index', [
             'roles' => $roles,
-            'filters' => $request->only(['name', 'per_page', 'sort', 'direction']),
+            'filters' => $request->only(['name', 'per_page', 'sort', 'direction','page']),
         ]);
     }
 
@@ -121,38 +121,35 @@ class RoleController extends Controller
         ]);
     }
 
-    public function update(Request $request, Role $role)
+    public function update(Request $request, Permission $permission)
     {
-        $user = Auth::user();
+        $user = $request->user();
 
-        if (! $user->hasRole('Super Admin') && $role->tenant_id !== $user->tenant_id) {
-            abort(403);
-        }
+        $tenantId = $user->hasRole('Super Admin') ? $request->tenant_id : $user->tenant_id;
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $role->id . ',id,tenant_id,' . ($role->tenant_id ?? 'NULL'),
-            'permissions' => 'array',
+            'name' => 'required|string|max:255',
+            'tenant_id' => 'nullable|exists:tenants,id',
         ]);
 
-        // Super Adminはtenant_idの変更も許可
-        $updateData = ['name' => $request->name];
-        if ($user->hasRole('Super Admin') && $request->has('tenant_id')) {
-            $updateData['tenant_id'] = $request->tenant_id ?: null;
-        }
-        $role->update($updateData);
+        $exists = Permission::where('name', $request->name)
+            ->where('guard_name', 'web')
+            ->where('tenant_id', $tenantId)
+            ->where('id', '!=', $permission->id)
+            ->first();
 
-        $permissions = $request->permissions ?? [];
-        if (! $user->hasRole('Super Admin')) {
-            $permissions = Permission::whereIn('id', $permissions)
-                                    ->where('tenant_id', $user->tenant_id)
-                                    ->pluck('id')
-                                    ->toArray();
+        if ($exists) {
+            return back()->withErrors(['name' => '同じテナント内で既に存在する権限です']);
         }
 
-        $role->syncPermissions($permissions);
+        $permission->update([
+            'name' => $request->name,
+            'tenant_id' => $tenantId,
+            'guard_name' => 'web',
+        ]);
 
-        return redirect()->route('roles.index', $request->filters ?? [])
-            ->with('success', __('Role updated successfully.'));
+        return redirect()->route('permissions.index', $request->input('filters', []))
+            ->with('success', __('Permission updated successfully.'));
     }
 
     public function destroy(Request $request, Role $role)

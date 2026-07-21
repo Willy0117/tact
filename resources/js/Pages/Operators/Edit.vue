@@ -152,19 +152,16 @@ const submitForm = () => {
   const payload = {
     ...form,
     tenant_id: form.tenant_id === 'all' ? null : form.tenant_id,
+    filters: props.filters,
   }
 
   if (props.operator?.id) {
     router.put(route('operators.update', props.operator.id), payload, {
-      preserveState: true,
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('operators.index', props.filters)),
     })
   } else {
     router.post(route('operators.store'), payload, {
-      preserveState: true,
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('operators.index', props.filters)),
     })
   }
 }

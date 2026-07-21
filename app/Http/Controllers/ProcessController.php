@@ -54,7 +54,7 @@ class ProcessController extends Controller
             'processes' => $processes,
             'tenants' => $tenants,
             'user' => $user,
-            'filters' => $request->only(['tenant_id', 'name', 'status', 'per_page', 'sort_by', 'sort_dir']),
+            'filters' => $request->only(['tenant_id', 'name', 'status', 'per_page', 'sort_by', 'sort_dir', 'page']),
         ]);
     }
 
@@ -84,7 +84,7 @@ class ProcessController extends Controller
         }
 
         return Inertia::render('Processes/Edit', [
-            'filters' => $request->only(['tenant_id', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'filters' => $request->only(['tenant_id', 'name', 'status', 'per_page', 'sort_by', 'sort_dir', 'page']),
             'process' => $process,
             'tenants' => $tenants,
             'user' => $user,
@@ -128,7 +128,7 @@ class ProcessController extends Controller
 
         Process::create($validated);
 
-        return redirect()->route('processes.index', $request->only(['tenant_id', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']))
+        return redirect()->route('processes.index',$request->input('filters', []))
             ->with('success', __('process has been created.'));
     }
 
@@ -143,7 +143,7 @@ class ProcessController extends Controller
             'tenants' => $tenants,
             'user' => $user,
             'mode' => 'edit',
-            'filters' => $request->only(['tenant_id', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'filters' => $request->only(['tenant_id', 'name', 'status', 'per_page', 'sort_by', 'sort_dir', 'page']),
         ]);
     }
 
@@ -183,7 +183,7 @@ class ProcessController extends Controller
 
         $process->update($validated);
 
-        return redirect()->route('processes.index', $request->only(['tenant_id', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']))
+        return redirect()->route('processes.index', $request->input('filters', []))
             ->with('success', __('process has been updated.'));
     }
 

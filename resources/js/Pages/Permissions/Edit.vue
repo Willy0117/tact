@@ -92,17 +92,18 @@ const cancel = () => {
 }
 
 const submitForm = () => {
+  const payload = {
+    ...form,
+    filters: props.filters,
+  }
+
   if (props.permission) {
-    router.put(route('permissions.update', props.permission.id), form, {
-      preserveState: true,
+    router.put(route('permissions.update', props.permission.id), payload, {
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('permissions.index', props.filters))
     })
   } else {
-    router.post(route('permissions.store'), form, {
-      preserveState: true,
+    router.post(route('permissions.store'), payload, {
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('permissions.index', props.filters))
     })
   }
 }

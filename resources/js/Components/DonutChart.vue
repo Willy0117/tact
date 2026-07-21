@@ -6,7 +6,11 @@ Chart.register(DoughnutController, ArcElement, Tooltip)
 
 const props = defineProps({
   value: Number,
-  total: Number
+  total: Number,
+  size: {
+    type: Number,
+    default: 256,
+  },
 })
 
 const canvasRef = ref(null)
@@ -19,10 +23,10 @@ const renderChart = () => {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [props.total - props.value,props.value, ],
+        data: [props.value, props.total - props.value],
         backgroundColor: [
-          '#F4A340', // オレンジ
-          '#49A6B8', // 青
+          '#22c55e',
+          '#ff8080',
         ],
         borderWidth: 0
       }]
@@ -42,7 +46,7 @@ const renderChart = () => {
         ctx.font = 'bold 22px sans-serif'
         ctx.textBaseline = 'middle'
         ctx.fillStyle = '#333'
-        const text = `${props.value}/${props.total}件`
+        const text = `${props.total}件`
         const textX = Math.round((width - ctx.measureText(text).width) / 2)
         const textY = height / 2
         ctx.fillText(text, textX, textY)
@@ -57,7 +61,7 @@ watch(() => [props.value, props.total], renderChart)
 </script>
 
 <template>
-  <div class="w-64 h-64">
+  <div :style="{ width: size + 'px', height: size + 'px' }">
     <canvas ref="canvasRef"></canvas>
   </div>
 </template>

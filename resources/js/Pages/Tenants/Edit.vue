@@ -89,17 +89,18 @@ const cancel = () => {
 }
 
 const submitForm = () => {
+  const payload = {
+    ...form,
+    filters: props.filters,
+  }
+
   if (props.tenant) {
-    router.put(route('tenants.update', props.tenant.id), form, {
-      preserveState: true,
+    router.put(route('tenants.update', props.tenant.id), payload, {
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('tenants.index', props.filters))
     })
   } else {
-    router.post(route('tenants.store'), form, {
-      preserveState: true,
+    router.post(route('tenants.store'), payload, {
       onError: (err) => Object.assign(errors, err),
-      onSuccess: () => router.get(route('tenants.index', props.filters))
     })
   }
 }

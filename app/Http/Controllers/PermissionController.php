@@ -104,7 +104,8 @@ class PermissionController extends Controller
             ]
         );
 
-        return redirect()->route('permissions.index', $request->filters ?? []);
+        return redirect()->route('permissions.index', $request->input('filters', []))
+            ->with('success', __('Permission created successfully.'));
     }
 
     /**

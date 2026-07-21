@@ -5,7 +5,7 @@
       <button
         :disabled="paginator.current_page === 1"
         @click="changePage(paginator.current_page - 1)"
-        class="px-2 py-1 border rounded hover:bg-gray-200 disabled:opacity-50"
+        class="w-8 h-8 flex items-center justify-center rounded-full border hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
       >
         «
       </button>
@@ -15,26 +15,28 @@
           v-if="page.type === 'page'"
           @click="changePage(page.number)"
           :class="[
-            'px-3 py-1 border rounded hover:bg-gray-200 cursor-pointer',
-            page.number === paginator.current_page ? 'bg-gray-300 font-bold' : ''
+            'w-8 h-8 flex items-center justify-center rounded-full cursor-pointer text-sm transition-colors',
+            page.number === paginator.current_page
+              ? 'bg-slate-800 text-white font-bold'
+              : 'border hover:bg-gray-100'
           ]"
         >
           {{ page.number }}
         </span>
-        <span v-else class="px-2">…</span>
+        <span v-else class="w-8 h-8 flex items-center justify-center text-gray-400">…</span>
       </template>
 
       <button
         :disabled="paginator.current_page === paginator.last_page"
         @click="changePage(paginator.current_page + 1)"
-        class="px-2 py-1 border rounded hover:bg-gray-200 disabled:opacity-50"
+        class="w-8 h-8 flex items-center justify-center rounded-full border hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
       >
         »
       </button>
     </div>
 
     <!-- 右端: 表示件数 -->
-    <div class="text-gray-600">
+    <div class="text-gray-600 text-sm">
       {{ startItem }}-{{ endItem }} / {{ paginator.total }}
     </div>
   </div>
@@ -44,15 +46,13 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  paginator: Object,          // Inertia のページネーションオブジェクト
-  onPageChange: Function      // ページ番号クリック時のコールバック
+  paginator: Object,
+  onPageChange: Function
 })
 
-// 表示件数計算
 const startItem = computed(() => props.paginator.per_page * (props.paginator.current_page - 1) + 1)
 const endItem = computed(() => Math.min(props.paginator.per_page * props.paginator.current_page, props.paginator.total))
 
-// ページ番号の省略表示ロジック
 const displayPages = computed(() => {
   const total = props.paginator.last_page
   const current = props.paginator.current_page
@@ -77,7 +77,6 @@ const displayPages = computed(() => {
   return pages
 })
 
-// ページ切り替え
 function changePage(page) {
   props.onPageChange(page)
 }

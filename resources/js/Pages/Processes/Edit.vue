@@ -173,19 +173,16 @@ const submitForm = () => {
   const payload = {
     ...form.data(),
     tenant_id: form.tenant_id === 'all' ? null : form.tenant_id,
+    filters: props.filters,
   }
 
   if (isEdit.value) {
     router.put(route('processes.update', props.process.id), payload, {
-      preserveState: true,
       onError: (err) => form.setError(err),
-      onSuccess: () => router.get(route('processes.index', props.filters)),
     })
   } else {
     router.post(route('processes.store'), payload, {
-      preserveState: true,
       onError: (err) => form.setError(err),
-      onSuccess: () => router.get(route('processes.index', props.filters)),
     })
   }
 }

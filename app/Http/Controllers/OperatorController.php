@@ -56,7 +56,6 @@ class OperatorController extends Controller
 
         $operator = null;
 
-        // コピー用モードの場合、idを除いたデータを渡す（新規作成扱いにするため）
         if ($request->input('mode') === 'copy' && $operatorId = $request->input('operator_id')) {
             $original = Operator::find($operatorId);
             if ($original) {
@@ -72,7 +71,7 @@ class OperatorController extends Controller
         }
 
         return Inertia::render('Operators/Edit', [
-            'filters' => $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'filters' => $request->only(['tenant', 'code', 'name', 'status', 'per_page', 'sort_by', 'sort_dir', 'page']),
             'operator' => $operator,
             'tenants' => $tenants,
             'user' => $user,
@@ -102,7 +101,7 @@ class OperatorController extends Controller
 
         Operator::create($validated);
 
-        return redirect()->route('operators.index', $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']))
+        return redirect()->route('operators.index', $request->input('filters', []))
             ->with('success', __('operator has been created.'));
     }
 
@@ -116,7 +115,7 @@ class OperatorController extends Controller
             'operator' => $operator,
             'tenants' => $tenants,
             'user' => $user,
-            'filters' => $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']),
+            'filters' => $request->only(['tenant', 'code', 'name', 'status', 'per_page', 'sort_by', 'sort_dir', 'page']),
         ]);
     }
 
@@ -143,7 +142,7 @@ class OperatorController extends Controller
 
         $operator->update($validated);
 
-        return redirect()->route('operators.index', $request->only(['code', 'name', 'per_page', 'sort_by', 'sort_dir', 'page']))
+        return redirect()->route('operators.index', $request->input('filters', []))
             ->with('success', __('operator has been updated.'));
     }
 

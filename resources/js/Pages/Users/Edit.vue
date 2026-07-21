@@ -4,78 +4,80 @@
       {{ user ? t('edit_user') : t('create_user') }}
     </template>
 
-    <div class="p-6 max-w-2xl mx-auto bg-white rounded shadow">
-      <form @submit.prevent="submit" class="space-y-4">
-        <!-- 名前 -->
-        <div>
-          <label class="block mb-1 font-medium">{{ t('name') }}</label>
-          <input v-model="form.name" type="text" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
-        </div>
+    <div class="p-6 max-w-2xl mx-auto">
+      <div class="bg-white border rounded-lg p-6 space-y-5">
+        <div class="space-y-5">
 
-        <!-- メール -->
-        <div>
-          <label class="block mb-1 font-medium">{{ t('email') }}</label>
-          <input v-model="form.email" type="email" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.email" class="text-red-500 text-sm">{{ errors.email }}</div>
-        </div>
+          <!-- 名前 -->
+          <div class="space-y-1.5">
+            <Label for="name">{{ t('name') }}</Label>
+            <Input id="name" v-model="form.name" type="text" autofocus />
+            <p v-if="errors.name" class="text-sm text-destructive">{{ errors.name }}</p>
+          </div>
 
-        <!-- パスワード -->
-        <div>
-          <label class="block mb-1 font-medium">{{ t('password') }}</label>
-          <input v-model="form.password" type="password" class="border rounded px-3 py-2 w-full" />
-          <div v-if="errors.password" class="text-red-500 text-sm">{{ errors.password }}</div>
-        </div>
+          <!-- メール -->
+          <div class="space-y-1.5">
+            <Label for="email">{{ t('email') }}</Label>
+            <Input id="email" v-model="form.email" type="email" />
+            <p v-if="errors.email" class="text-sm text-destructive">{{ errors.email }}</p>
+          </div>
 
-        <div>
-          <label class="block mb-1 font-medium">{{ t('confirm password') }}</label>
-          <input v-model="form.password_confirmation" type="password" class="border rounded px-3 py-2 w-full" />
-        </div>
+          <!-- パスワード -->
+          <div class="space-y-1.5">
+            <Label for="password">{{ t('password') }}</Label>
+            <Input id="password" v-model="form.password" type="password" />
+            <p v-if="errors.password" class="text-sm text-destructive">{{ errors.password }}</p>
+          </div>
 
-        <!-- Tenant（SuperAdminのみ） -->
-        <div v-if="isSuperAdmin">
-          <label class="block mb-1 font-medium">{{ t('tenant') }}</label>
-          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
-            <option :value="null" disabled>{{ t('select_tenant') }}</option>
-            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.name }}
-            </option>
-          </select>
-          <div v-if="errors.tenant_id" class="text-red-500 text-sm">{{ errors.tenant_id }}</div>
-        </div>
+          <div class="space-y-1.5">
+            <Label for="password_confirmation">{{ t('confirm password') }}</Label>
+            <Input id="password_confirmation" v-model="form.password_confirmation" type="password" />
+          </div>
 
-        <!-- Role選択 -->
-        <div>
-          <label class="block mb-1 font-medium">{{ t('role') }}</label>
-          <select v-model="form.role_id" class="border rounded px-3 py-2 w-full">
-            <option :value="null" disabled>{{ t('select_role') }}</option>
-            <option v-for="role in roles" :key="role.id" :value="role.id">
-              {{ role.name }} - {{ role.tenant_name }}
-            </option>
-          </select>
-          <div v-if="errors.role_id" class="text-red-500 text-sm">{{ errors.role_id }}</div>
-        </div>
+          <!-- Tenant（SuperAdminのみ） -->
+          <div v-if="isSuperAdmin" class="space-y-1.5">
+            <Label for="tenant_id">{{ t('tenant') }}</Label>
+            <Select v-model="form.tenant_id">
+              <SelectTrigger id="tenant_id">
+                <SelectValue :placeholder="t('select_tenant')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)">
+                  {{ tenant.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p v-if="errors.tenant_id" class="text-sm text-destructive">{{ errors.tenant_id }}</p>
+          </div>
 
-        <!-- 保存ボタン -->
-        <div class="flex justify-between items-center">
-          <!-- 左：キャンセル -->
-          <button
-            type="button"
-            @click="router.get(route('users.index', persistQuery()))"
-            class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-          >
-            {{ t('cancel') }}
-          </button>
+          <!-- Role選択 -->
+          <div class="space-y-1.5">
+            <Label for="role_id">{{ t('role') }}</Label>
+            <Select v-model="form.role_id">
+              <SelectTrigger id="role_id">
+                <SelectValue :placeholder="t('select_role')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="role in roles" :key="role.id" :value="String(role.id)">
+                  {{ role.name }} - {{ role.tenant_name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p v-if="errors.role_id" class="text-sm text-destructive">{{ errors.role_id }}</p>
+          </div>
 
-          <!-- 右：作成/更新 -->
-          <button
-            type="submit"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-          >
-            {{ user ? t('update') : t('create') }}
-          </button>
+          <!-- 保存ボタン -->
+          <div class="flex justify-between items-center pt-2">
+            <Button type="button" variant="outline" @click="cancel">
+              <X class="w-3.5 h-3.5 mr-1" />{{ t('cancel') }}
+            </Button>
+            <Button type="button" @click="submit">
+              <Check class="w-3.5 h-3.5 mr-1" />{{ user ? t('update') : t('create') }}
+            </Button>
+          </div>
+
         </div>
-      </form>
+      </div>
     </div>
   </AppLayout>
 </template>
@@ -85,25 +87,30 @@ import AppLayout from '@/Layouts/AppLayout.vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Check, X } from '@lucide/vue'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const { t } = useI18n()
 
 const props = defineProps({
   auth: { type: Object, default: () => ({}) },
-  user: { type: Object, default: () => ({}) },
+  user: { type: Object, default: null },
   roles: { type: Array, default: () => [] },
   tenants: { type: Array, default: () => [] },
   selected_role: { type: Number, default: null },
   filters: { type: Object, default: () => ({}) },
 })
-// Super Admin 判定
+
 const isSuperAdmin = computed(() => {
-  const roles = props.auth.user?.roles || [];
-  return roles.some(role => role.name.toLowerCase() === 'super admin');
-});
+  const roles = props.auth.user?.roles || []
+  return roles.some(role => role.name.toLowerCase() === 'super admin')
+})
 
 const persistQuery = () => ({
-  code: props.filters.code ?? '',
   name: props.filters.name ?? '',
   email: props.filters.email ?? '',
   tenant_id: props.filters.tenant_id ?? '',
@@ -118,24 +125,25 @@ const form = useForm({
   email: props.user?.email || '',
   password: '',
   password_confirmation: '',
-  role_id: props.selected_role || null,
-  tenant_id: props.user?.tenant_id || null
+  role_id: props.selected_role ? String(props.selected_role) : null,
+  tenant_id: props.user?.tenant_id ? String(props.user.tenant_id) : null,
 })
 
 const errors = form.errors
 
-const submit = () => {
-  const method = props.user?.id ? 'put' : 'post';
-  const url = props.user?.id ? route('users.update', props.user.id) : route('users.store');
-
-  form[method](url, {
-    onSuccess: () => {
-      router.get(route('users.index'), props.filters, { preserveState: true });
-    },
-    onError: (e) => console.log(e)
-  });
+const cancel = () => {
+  router.get(route('users.index', persistQuery()))
 }
 
+const submit = () => {
+  const method = props.user?.id ? 'put' : 'post'
+  const url = props.user?.id ? route('users.update', props.user.id) : route('users.store')
+
+  form.transform((data) => ({
+    ...data,
+    filters: props.filters,
+  })).submit(method, url, {
+    onError: (e) => console.log(e)
+  })
+}
 </script>
-
-

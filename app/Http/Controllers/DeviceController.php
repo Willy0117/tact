@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Validation\Rule;
 use App\Models\Tenant;
-use App\Models\User;
 use App\Models\Process;
 
 class DeviceController extends Controller
@@ -17,86 +15,78 @@ class DeviceController extends Controller
     {
         $user = $request->user();
         $query = Device::query()->with('process');
-        // テナント絞り込み（Super Admin は全件表示）
+
         if (!$user->hasRole('Super Admin')) {
             $query->where('tenant_id', $user->tenant_id);
         }
 
-        // 個別検索
-        if ($code = $request->input('code')) {
-            $query->where('code', 'like', "%{$code}%");
-        }
-        if ($name = $request->input('name')) {
-            $query->where('name', 'like', "%{$name}%");
-        }
-        if ($processId = $request->input('process_id')) {
-            $query->where('process_id', $processId);
-        }
-        if ($measurement = $request->input('measurement')) {
-            $query->where('measurement', $measurement);
-        }
-
-        // ソート
-        $sortBy = $request->input('sort_by', 'id');
-        $sortDir = $request->input('sort_dir', 'asc');
-        $query->orderBy($sortBy, $sortDir);
-
-        // ページあたり件数
-        $perPage = intval($request->input('per_page', 20));
-
-        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];     
-                        
+        $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
         $processes = Process::all(['id', 'name']);
+
+        // 有効/無効フィルタ（デフォルトは「有効のみ」）
+        $status = $request->input('status', 'enabled');
 
         $devices = $query
             ->when(
-                $request->tenant_id > 0,
+                $user->hasRole('Super Admin') && $request->tenant_id,
                 fn ($q) => $q->where('tenant_id', $request->tenant_id)
             )
-            ->when($request->code, fn($q,$v)=>$q->where('code','like',"%$v%"))
-            ->when($request->name, fn($q,$v)=>$q->where('name','like',"%$v%"))
-            ->when($request->process_id, fn($q,$v) => $q->where('process_id', $v))
+            ->when($status === 'enabled', fn ($q) => $q->where('disabled', 0))
+            ->when($status === 'disabled', fn ($q) => $q->where('disabled', 1))
+            ->when($request->name, fn($q, $v) => $q->where('name', 'like', "%$v%"))
+            ->when($request->process_id, fn($q, $v) => $q->where('process_id', $v))
             ->when(
-                !is_null($request->measurement),
+                $request->measurement !== null && $request->measurement !== '',
                 fn ($q) => $q->where('measurement', (int) $request->measurement)
             )
             ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'asc')
-            ->paginate($perPage)
-            ->withQueryString(); // 検索条件をページリンクに保持
-
+            ->paginate(intval($request->input('per_page', 20)))
+            ->withQueryString();
 
         return Inertia::render('Devices/Index', [
             'devices' => $devices,
             'tenants' => $tenants,
-            'user' => $user, 
+            'user' => $user,
             'processes' => $processes,
-            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','tenant_id']),
+            'filters' => $request->only(['name', 'process_id', 'measurement', 'status', 'per_page', 'sort_by', 'sort_dir', 'tenant_id']),
         ]);
     }
 
-    // Create 画面
+    // Create画面（Editと共用）
     public function create(Request $request)
     {
-        $device = null;
         $user = auth()->user()->load('roles');
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
 
-        // コピー用モードの場合
-        if ($request->input('mode') === 'copy' && $device_id = $request->input('device_id')) {
-            $device = Device::find($device_id);
+        $device = null;
+
+        // コピー用モードの場合、idを除いたデータを渡す（新規作成扱いにするため）
+        if ($request->input('mode') === 'copy' && $deviceId = $request->input('device_id')) {
+            $original = Device::find($deviceId);
+            if ($original) {
+                $device = [
+                    'id' => null,
+                    'name' => $original->name,
+                    'process_id' => $original->process_id,
+                    'measurement' => $original->measurement,
+                    'disabled' => $original->disabled,
+                    'display_order' => $original->display_order,
+                    'tenant_id' => $original->tenant_id,
+                ];
+            }
         }
-        // process 選択肢を取得
+
         $processes = Process::query()
             ->when($request->filled('tenant_id'), function ($q) use ($request) {
                 $q->where('tenant_id', $request->tenant_id);
             })
             ->get(['id', 'name']);
 
-        return Inertia::render('Devices/Create', [
-            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']),
+        return Inertia::render('Devices/Edit', [
+            'filters' => $request->only(['name', 'process_id', 'measurement', 'per_page', 'sort_by', 'sort_dir', 'page']),
             'tenants' => $tenants,
-            'user' => $user, // Vue 側で判定に必要
-            'device' => $device, // コピー元のデータを渡す
+            'user' => $user,
+            'device' => $device,
             'processes' => $processes,
         ]);
     }
@@ -104,38 +94,35 @@ class DeviceController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        
+
         $validated = $request->validate([
-            //'code' => ['nullable', 'string', Rule::unique('devices')],
             'name' => ['required', 'string'],
             'process_id' => ['required', 'integer', 'exists:processes,id'],
             'measurement' => ['required', 'boolean'],
             'disabled' => ['required', 'boolean'],
             'display_order' => ['required', 'integer'],
-            'tenant_id' => ['nullable', 'exists:tenants,id'],             
+            'tenant_id' => ['nullable', 'exists:tenants,id'],
         ], [
-   //         'code.required' => __('validation.required', ['attribute' => __('Code')]),
-   //         'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
             'name.required' => __('validation.required', ['attribute' => __('Name')]),
             'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
-        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
-        $validated['tenant_id'] = $user->hasRole('Super Admin') 
-            ? $validated['tenant_id'] 
+
+        $validated['tenant_id'] = $user->hasRole('Super Admin')
+            ? $validated['tenant_id']
             : $user->tenant_id;
 
         Device::create($validated);
 
-        return redirect()->route('devices.index', $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('devices.index', $request->input('filters', []))
             ->with('success', __('device has been created.'));
     }
 
     public function edit(Request $request, Device $device)
     {
         $user = $request->user();
-        
+
         $tenants = $user->hasRole('Super Admin') ? Tenant::all() : [];
-        // process 選択肢を取得
+
         $processes = Process::query()
             ->when($request->filled('tenant_id'), function ($q) use ($request) {
                 $q->where('tenant_id', $request->tenant_id);
@@ -145,9 +132,9 @@ class DeviceController extends Controller
         return Inertia::render('Devices/Edit', [
             'device' => $device,
             'tenants' => $tenants,
-            'user' => $user, // Vue 側で判定に必要
+            'user' => $user,
             'processes' => $processes,
-            'filters' => $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page'])
+            'filters' => $request->only(['name', 'process_id', 'measurement', 'per_page', 'sort_by', 'sort_dir', 'page']),
         ]);
     }
 
@@ -156,40 +143,39 @@ class DeviceController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            //'code' => ['required', 'string', Rule::unique('devices')->ignore($device->id)],
             'measurement' => ['required', 'boolean'],
             'name' => ['required', 'string'],
             'process_id' => ['required', 'integer', 'exists:processes,id'],
             'disabled' => ['required', 'boolean'],
             'display_order' => ['required', 'integer'],
-            'tenant_id' => ['nullable', 'exists:tenants,id'],             
+            'tenant_id' => ['nullable', 'exists:tenants,id'],
         ], [
-            'code.required' => __('validation.required', ['attribute' => __('Code')]),
-            'code.unique' => __('validation.unique', ['attribute' => __('Code')]),
             'name.required' => __('validation.required', ['attribute' => __('Name')]),
             'display_order.required' => __('validation.required', ['attribute' => __('Display Order')]),
         ]);
-        // tenant_id を設定（Super Admin は選択、Tenant Admin は自動）
-        $validated['tenant_id'] = $user->hasRole('Super Admin') 
-            ? $validated['tenant_id'] 
+
+        $validated['tenant_id'] = $user->hasRole('Super Admin')
+            ? $validated['tenant_id']
             : $user->tenant_id;
 
         $device->update($validated);
 
-        return redirect()->route('devices.index', $request->only(['code','name','process_id','measurement','per_page','sort_by','sort_dir','page']))
+        return redirect()->route('devices.index', $request->input('filters', []))
             ->with('success', __('device has been updated.'));
     }
 
-    public function destroy(Device $device)
+    public function destroy(Request $request, Device $device)
     {
         $device->delete();
-        return redirect()->route('devices.index')->with('success', __('device has been deleted.'));
+        return redirect()->route('devices.index', $request->all())
+            ->with('success', __('device has been deleted.'));
     }
 
     public function bulkDelete(Request $request)
     {
         Device::whereIn('id', $request->ids)->delete();
-        return redirect()->route('devices.index')->with('success', __('Selected devices have been deleted.'));
+        return redirect()->route('devices.index', $request->except('ids'))
+            ->with('success', __('Selected devices have been deleted.'));
     }
 
     public function autocomplete(Request $request)
@@ -197,7 +183,7 @@ class DeviceController extends Controller
         $search = $request->input('q');
 
         $devices = Device::query()
-            ->when(auth()->user()->tenant_id, fn($q, $tenantId) => 
+            ->when(auth()->user()->tenant_id, fn($q, $tenantId) =>
                 $q->where('tenant_id', $tenantId)
             )
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
@@ -206,8 +192,8 @@ class DeviceController extends Controller
             ->get()
             ->map(fn($m) => [
                 'id' => $m->id,
-                'name' => "{$m->name}",
-                'label' => "{$m->name} ({$m->code})"
+                'name' => $m->name,
+                'label' => $m->name,
             ]);
 
         return response()->json($devices);
@@ -218,19 +204,7 @@ class DeviceController extends Controller
         return response()->json([
             'id' => $device->id,
             'name' => $device->name,
-            'label' => "{$device->name} ({$device->code})",
+            'label' => $device->name,
         ]);
-    }  
-
-    // API Real Check
-    public function checkCode(Request $request)
-    {
-        $exists = Device::where('code', $request->code)
-            ->when($request->id, fn($q) => $q->where('id','!=',$request->id))
-            ->exists();
-
-        return response()->json(['exists' => $exists]);
     }
-
 }
-

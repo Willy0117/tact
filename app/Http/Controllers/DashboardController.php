@@ -6,27 +6,22 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Temperature;
 use App\Models\Tenant;
-use App\Models\User;
-use App\Models\Process;
 use App\Models\Menu;
-use App\Models\Device;
-use App\Models\Sensor;
-use App\Models\Operator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-   public function index(Request $request)
+    public function index(Request $request)
     {
         $user = $request->user();
 
         $tenantId = $this->resolveTenantId($user, $request);
 
-        $today = $this->getTemperatureSummary('today', $tenantId );
-        $month = $this->getTemperatureSummary('month', $tenantId );
-
-        $query = Temperature::query();
+        $today = $this->getTemperatureSummary('today', $tenantId);
+        $yesterday = $this->getTemperatureSummary('yesterday', $tenantId);
+        $month = $this->getTemperatureSummary('month', $tenantId);
+        $lastMonth = $this->getTemperatureSummary('last_month', $tenantId);
 
         $perPage = intval($request->query('per_page', 5));
 
@@ -36,16 +31,15 @@ class DashboardController extends Controller
             ->when($tenantId > 0, function ($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
             })
-            ->whereDate('created_at', today()) // ← これが必要
+            ->whereDate('created_at', today())
             ->with([
                 'menu:id,name',
                 'process:id,name',
                 'operator:id,name',
             ])
-            ->latest() // created_at desc
+            ->latest()
             ->limit(5)
             ->get();
-
 
         $todayMenus = Menu::query()
             ->when($tenantId > 0, fn ($q) => $q->where('menus.tenant_id', $tenantId))
@@ -72,15 +66,17 @@ class DashboardController extends Controller
             ->orderBy('menus.serving_time')
             ->orderBy('menus.id')
             ->get();
+            \Log::info('dashboard debug', [
+    'tenantId' => $tenantId,
+    'today' => $today,
+    'month' => $month,
+]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Inertia レンダリング
-        |--------------------------------------------------------------------------
-        */
         return Inertia::render('Dashboard', [
             'today' => $today,
+            'yesterday' => $yesterday,
             'month' => $month,
+            'lastMonth' => $lastMonth,
             'logs'  => $logs,
             'menus' => $todayMenus,
             'tenants' => $tenants,
@@ -88,9 +84,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    /*
-
-     */
     private function getTemperatureSummary(string $period, ?int $tenantId = null): array
     {
         $query = Temperature::with('process')
@@ -102,9 +95,19 @@ class DashboardController extends Controller
             $query->whereDate('created_at', today());
         }
 
+        if ($period === 'yesterday') {
+            $query->whereDate('created_at', today()->subDay());
+        }
+
         if ($period === 'month') {
             $query->whereYear('created_at', now()->year)
                 ->whereMonth('created_at', now()->month);
+        }
+
+        if ($period === 'last_month') {
+            $lastMonth = now()->subMonthNoOverflow();
+            $query->whereYear('created_at', $lastMonth->year)
+                ->whereMonth('created_at', $lastMonth->month);
         }
 
         $logs = $query->get();
@@ -113,35 +116,31 @@ class DashboardController extends Controller
         $deviation = 0;
 
         foreach ($logs as $log) {
-
             $process = $log->process;
 
             if (!$process || $process->threshold_type === 'none') {
                 continue;
             }
 
-            $okCount = 0; // ← 料理ごとのOK回数
+            $okCount = 0;
 
             foreach ($log->temperatures as $temp) {
                 $value = $temp['value'];
 
                 if ($process->name === '冷却') {
-
                     if ($value <= $process->threshold_value) {
                         $okCount++;
                     }
-
                 } elseif ($process->name === '加熱') {
-
                     if ($value >= $process->threshold_value) {
                         $okCount++;
                     }
                 }
             }
             if ($okCount > 2) {
-                $success++;      // ○
+                $success++;
             } else {
-                $deviation++;    // ✕
+                $deviation++;
             }
         }
 
@@ -154,21 +153,14 @@ class DashboardController extends Controller
 
     private function resolveTenantId($user, $request): ?int
     {
-        // 一般ユーザーは自分のtenant固定
         if ($user->tenant_id > 0) {
             return $user->tenant_id;
         }
 
-        // super_admin などは request 優先
         if ($request->tenant_id > 0) {
             return $request->tenant_id;
         }
 
-        return null; // 全体
+        return null;
     }
-
-
 }
-
-
-

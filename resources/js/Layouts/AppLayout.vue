@@ -1,4 +1,6 @@
 <template>
+  <Toast />
+
   <div class="flex flex-col h-screen bg-white">
     <div class="flex flex-1">
       <!-- 左メニュー -->
@@ -24,6 +26,7 @@
       </div>
 
         <div class="flex items-center space-x-4 text-sm">
+          <span class="text-gray-700 text-sm mr-3">{{ today }}</span>
           <div class="relative inline-block text-left">
             <!-- トリガーボタン -->
             <button
@@ -44,7 +47,6 @@
                 />
               </svg>
             </button>
-
             <!-- ドロップダウンメニュー -->
             <div
               v-if="open"
@@ -77,6 +79,9 @@
       <!-- コンテンツ -->
       <main class="flex-1 p-6">
         <slot />
+
+        <LoadingOverlay />
+
       </main>
     </div>
   </div>
@@ -99,10 +104,19 @@
 
 <script setup>
 import Navigation from './Navigation.vue'
+import Toast from '@/Components/Toast.vue'
+import LoadingOverlay from '@/Components/LoadingOverlay.vue'
+
 import { router, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { ArrowRightOnRectangleIcon, GlobeAltIcon } from '@heroicons/vue/24/outline'
 import { useI18n } from 'vue-i18n'
+import dayjs from 'dayjs'
+import 'dayjs/locale/ja'
+
+dayjs.locale('ja')
+
+const today = dayjs().format('YYYY年M月D日(ddd)')
 
 const { props } = usePage()
 const user = props.auth.user

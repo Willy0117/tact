@@ -101,10 +101,13 @@ const submitForm = () => {
     ? route('roles.update', props.role.id)
     : route('roles.store')
 
-  router[method](url, form, {
-    preserveState: true,
+  const payload = {
+    ...form,
+    filters: props.filters,
+  }
+
+  router[method](url, payload, {
     onError: err => Object.assign(errors, err),
-    onSuccess: () => router.get(route('roles.index', props.filters)),
   })
 }
 </script>

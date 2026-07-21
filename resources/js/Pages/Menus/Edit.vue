@@ -1,81 +1,73 @@
 <template>
   <AppLayout>
-    <template #header>{{ t('edit_menu') }}</template>
+    <template #header>
+      {{ menu ? t('edit_menu') : t('add_menu') }}
+    </template>
 
-    <div class="p-6">
-      <div class="space-y-4">
-        <!-- 料理名 -->
-        <div>
-          <label class="block">{{ t('dish_name') }}</label>
-          <textarea v-model="form.name" class="border rounded px-3 py-2 w-full" rows="2"></textarea>
-          <div v-if="errors.name" class="text-red-500 text-sm">{{ errors.name }}</div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- 配膳日 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('serving_date') }}</label>
-            <div class="relative">
-              <input
-                v-model="form.serving_date"
-                type="date"
-                class="border rounded px-3 py-2 w-full"
-              />
+    <div class="p-6 max-w-2xl mx-auto">
+      <div class="bg-white border rounded-lg p-6 space-y-5">
+        <div class="space-y-5">
+
+          <!-- 料理名 -->
+          <div class="space-y-1.5">
+            <Label for="name">{{ t('dish_name') }}</Label>
+            <textarea id="name" v-model="form.name" class="w-full border rounded px-3 py-2" rows="2" />
+            <p v-if="errors.name" class="text-sm text-destructive">{{ errors.name }}</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 配膳日 -->
+            <div class="space-y-1.5">
+              <Label for="serving_date">{{ t('serving_date') }}</Label>
+              <Input id="serving_date" v-model="form.serving_date" type="date" />
+            </div>
+
+            <!-- 配膳時間 -->
+            <div class="space-y-1.5">
+              <Label for="serving_time">{{ t('serving_time') }}</Label>
+              <Input id="serving_time" v-model="form.serving_time" type="time" />
+            </div>
+
+            <!-- 調理日 -->
+            <div class="space-y-1.5">
+              <Label for="cooking_date">{{ t('cooking_date') }}</Label>
+              <Input id="cooking_date" v-model="form.cooking_date" type="date" />
             </div>
           </div>
 
-          <!-- 配膳時間 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('serving_time') }}</label>
-            <div class="relative">
-              <input
-                v-model="form.serving_time"
-                type="time"
-                class="border rounded px-3 py-2 w-full"
-              />
-            </div>
+          <!-- 材料 -->
+          <div class="space-y-1.5">
+            <Label for="materials">{{ t('materials') }}</Label>
+            <textarea id="materials" v-model="form.materials" class="w-full border rounded px-3 py-2" rows="3" />
+            <p v-if="errors.materials" class="text-sm text-destructive">{{ errors.materials }}</p>
           </div>
 
-          <!-- 調理日 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('cooking_date') }}</label>
-            <div class="relative">
-              <input
-                v-model="form.cooking_date"
-                type="date"
-                class="border rounded px-3 py-2 w-full"
-              />
-            </div>
+          <!-- Tenant 選択 (Super Admin のみ) -->
+          <div v-if="isSuperAdmin" class="space-y-1.5">
+            <Label for="tenant_id">{{ t('tenant') }}</Label>
+            <Select v-model="form.tenant_id">
+              <SelectTrigger id="tenant_id">
+                <SelectValue :placeholder="t('select_tenant')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{{ t('select_tenant') }}</SelectItem>
+                <SelectItem v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)">
+                  {{ tenant.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-        <!-- 材料 -->
-        <div>
-          <label class="block">{{ t('materials') }}</label>
-          <textarea v-model="form.materials" class="border rounded px-3 py-2 w-full" rows="3"></textarea>
-          <div v-if="errors.materials" class="text-red-500 text-sm">{{ errors.materials }}</div>
-        </div>
-       <!-- Tenant 選択 (Super Admin のみ) -->
-        <div v-if="isSuperAdmin" class="mt-4">
-          <label class="block mb-1">{{ t('tenant') }}</label>
-          <select v-model="form.tenant_id" class="border rounded px-3 py-2 w-full">
-            <option :value="null">{{ t('select_tenant') }}</option>
-            <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.name }}
-            </option>
-          </select>
-        </div>
-        <input type="hidden" v-model="form.redirect_to" />
-        <!-- ボタン -->
-        <div class="flex space-x-2">
-          <button @click="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            {{ t('save') }}
-          </button>
-          <button
-            type="button"
-            @click="router.get(form.redirect_to || route('menus.index'))"
-            class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-          >
-            {{ t('cancel') }}
-          </button>
+
+          <!-- ボタン -->
+          <div class="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" @click="cancel">
+              <X class="w-3.5 h-3.5 mr-1" />{{ t('cancel') }}
+            </Button>
+            <Button type="button" @click="submit">
+              <Check class="w-3.5 h-3.5 mr-1" />{{ menu ? t('update') : t('save') }}
+            </Button>
+          </div>
+
         </div>
       </div>
     </div>
@@ -87,51 +79,62 @@ import AppLayout from '@/Layouts/AppLayout.vue'
 import { reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { router } from '@inertiajs/vue3'
-import { CalendarIcon, ClockIcon } from '@heroicons/vue/24/outline'
+import { Check, X } from '@lucide/vue'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const { t } = useI18n()
 
 const props = defineProps({
-  filters: Object,
-  tenants: Array,      // Super Admin のみ
-  user: Object,
-  menu: Object, // 編集対象
-  redirect_to: String,
+  filters: { type: Object, default: () => ({}) },
+  tenants: { type: Array, default: () => [] },
+  user: { type: Object, default: null },
+  menu: { type: Object, default: null },
+  redirect_to: { type: String, default: '' },
 })
-console.log(props)
 
 const isSuperAdmin = computed(() =>
   props.user?.roles?.some(r => r.name.toLowerCase() === 'super admin')
 )
 
 const form = reactive({
-  id: props.menu.id,
-  name: props.menu.name,
-  serving_date: props.menu.serving_date,
-  serving_time: props.menu.serving_time,
-  cooking_date: props.menu.cooking_date,
-  materials: props.menu.materials,
-  tenant_id: props.menu
-  ? props.menu.tenant_id
-  : (isSuperAdmin.value ? null : props.user?.tenant_id ?? null),
+  name: props.menu?.name ?? '',
+  serving_date: props.menu?.serving_date ?? '',
+  serving_time: props.menu?.serving_time ?? '',
+  cooking_date: props.menu?.cooking_date ?? '',
+  materials: props.menu?.materials ?? '',
+  tenant_id: props.menu?.tenant_id
+    ? String(props.menu.tenant_id)
+    : (isSuperAdmin.value ? 'all' : String(props.user?.tenant_id ?? '')),
   redirect_to: props.redirect_to,
 })
-
-
 
 const errors = reactive({
   name: '', serving_date: '', serving_time: '', cooking_date: '', materials: ''
 })
 
+const cancel = () => {
+  router.get(form.redirect_to || route('menus.index', props.filters))
+}
+
 const submit = () => {
-  router.put(
-    route('menus.update', { menu: props.menu.id }),
-    form,
-    {
-      preserveState: true,
-      onSuccess: () => router.get(form.redirect_to || route('menus.index')),
+  const payload = {
+    ...form,
+    tenant_id: form.tenant_id === 'all' ? null : form.tenant_id,
+    filters: props.filters,
+  }
+
+  if (props.menu?.id) {
+    router.put(route('menus.update', { menu: props.menu.id }), payload, {
       onError: (errs) => Object.assign(errors, errs),
-    }
-  );
-};
+    })
+  } else {
+    router.post(route('menus.store'), payload, {
+      onError: (errs) => Object.assign(errors, errs),
+    })
+  }
+}
 </script>
